@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head><meta charset="UTF-8"><title>Тест изображений</title>
+<style>
+body { background: #111; color: #eee; font-family: monospace; padding: 20px; }
+.img-row { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; padding: 8px; border: 1px solid #333; }
+img { width: 120px; height: 80px; object-fit: cover; background: #222; }
+.ok { color: #4f4; } .fail { color: #f44; }
+</style>
+</head>
+<body>
+<h2 style="color:#daa520">Тест загрузки изображений</h2>
+<p>Зелёный статус = изображение загрузилось. Красный = не работает.</p>
+<div id="results"></div>
+<script>
+const images = [
+    ['Старая Ладога', 'city_ladoga_1778921025104.png'],
+    ['Новгород (Васнецов)', 'city_novgorod_1778921044811.png'],
+    ['Смоленск', 'city_smolensk_1778921062763.png'],
+    ['Киев (Билибин)', 'city_kiev_1778921082705.png'],
+    ['Константинополь', 'city_constantinople_1778921101295.png'],
+    ['Ярослав Мудрый (Рерих)', 'epoch_1054_golden_1778920950788.png'],
+    ['Нашествие Батыя', "epoch_1237_invasion_1778920967437.png"],
+    ['Москва Васнецов', 'epoch_1462_moscow_1778921005663.png'],
+    ['Киев регион', 'city_kiev_1778921082705.png'],
+    ['Новгородское вече', 'city_novgorod_1778921044811.png'],
+    ['Долобский съезд', 'epoch_1237_invasion_1778920967437.png'],
+    ['Кремль Ивана III', 'epoch_1462_moscow_1778921005663.png'],
+    ['Башня Гедимина', 'city_vladimir_1778921158897.png'],
+];
+
+const div = document.getElementById('results');
+images.forEach(([name, url]) => {
+    const row = document.createElement('div');
+    row.className = 'img-row';
+    const img = document.createElement('img');
+    const status = document.createElement('span');
+    status.textContent = '⏳ Загрузка...';
+    img.onload = () => { status.textContent = '✅ OK'; status.className = 'ok'; };
+    img.onerror = () => { status.textContent = '❌ Не загрузилось'; status.className = 'fail'; };
+    img.src = url;
+    const label = document.createElement('span');
+    label.textContent = name;
+    row.appendChild(img);
+    row.appendChild(status);
+    row.appendChild(label);
+    div.appendChild(row);
+});
+</script>
+</body>
+</html>
+
+
+
+

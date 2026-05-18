@@ -1,0 +1,1924 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Торговые пути Руси — Интерактивная историческая энциклопедия</title>
+    <meta name="description" content="Интерактивная карта торговых путей Древней Руси: путь из варяг в греки, Волжский торговый путь, ключевые города и события IX-XV веков.">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Leaflet JS (Карты) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Исторические шрифты -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --dark-bg: #0f0f11; /* Глубокий черный фон */
+            --panel-bg: #1c1c1c; /* Темное дерево/кожа */
+            --gold: #daa520; /* Старинное золото */
+            --blood: #8b0000; /* Кровь/Сургуч */
+            --text-light: #e0e0e0;
+            --border-color: #333333;
+        }
+
+        body {
+            font-family: 'Merriweather', serif;
+            background-color: var(--dark-bg);
+            color: var(--text-light);
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .font-cinzel { font-family: 'Cinzel', serif; }
+
+        /* Карта */
+        #map-container {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            z-index: 1;
+            background-color: var(--dark-bg);
+        }
+        #map { width: 100%; height: 100%; background: var(--dark-bg); }
+
+        /* Убираем рамки при фокусе */
+        .leaflet-container:focus { outline: none; }
+
+        /* UI Панели */
+        #ui-layer {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+        }
+        /* Верхняя зона (боковые панели) — заполняет до нижней панели */
+        #ui-top {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 16px;
+            gap: 0;
+        }
+        /* Нижняя панель — фиксирована к низу вьюпорта */
+        #ui-bottom {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            z-index: 20;
+            display: flex;
+            justify-content: center;
+            padding: 16px 24px 20px;
+            pointer-events: none;
+            background: linear-gradient(to top, rgba(15,15,17,0.7) 0%, transparent 100%);
+        }
+
+        .interactive-panel {
+            pointer-events: auto; /* Включаем клики только на самих панелях */
+            background: rgba(28, 28, 28, 0.95);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        /* Кастомный скроллбар */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--dark-bg); }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+
+        /* Кнопки */
+        .btn-medieval {
+            background-color: #111;
+            color: var(--gold);
+            border: 1px solid var(--gold);
+            transition: all 0.3s;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+        .btn-medieval:hover {
+            background-color: var(--gold);
+            color: #000;
+            box-shadow: 0 0 15px rgba(218, 165, 32, 0.4);
+        }
+
+        /* Слайдер времени */
+        input[type=range] {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            width: 100%;
+            background: transparent;
+            cursor: pointer;
+            outline: none;
+            touch-action: pan-y;
+        }
+        /* WebKit/Blink (Chrome, Safari, Edge, Opera) */
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 26px; width: 14px;
+            background: var(--gold);
+            cursor: pointer;
+            margin-top: -11px;
+            box-shadow: 0 0 10px var(--gold), 0 0 0 2px #000;
+            border-radius: 3px;
+            border: none;
+            position: relative;
+            z-index: 2;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px;
+            cursor: pointer;
+            background: #444;
+            border-radius: 2px;
+        }
+        /* Firefox */
+        input[type=range]::-moz-range-thumb {
+            height: 26px; width: 14px;
+            background: var(--gold);
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--gold);
+            border-radius: 3px;
+            border: 2px solid #000;
+        }
+        input[type=range]::-moz-range-track {
+            width: 100%; height: 4px;
+            background: #444;
+            border-radius: 2px;
+        }
+        input[type=range]::-moz-range-progress {
+            background: var(--gold);
+            height: 4px;
+            border-radius: 2px;
+        }
+        /* Скрытие слайдера */
+        #ui-bottom.timeline-hidden .interactive-panel > *:not(.timeline-toggle-row) {
+            display: none !important;
+        }
+        #ui-bottom.timeline-hidden .interactive-panel {
+            padding: 10px 16px !important;
+        }
+        .timeline-toggle-btn {
+            background: none;
+            border: 1px solid #444;
+            color: var(--gold);
+            font-family: 'Cinzel', serif;
+            font-size: 10px;
+            letter-spacing: 1px;
+            cursor: pointer;
+            padding: 3px 10px;
+            border-radius: 2px;
+            transition: all 0.2s;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .timeline-toggle-btn:hover {
+            border-color: var(--gold);
+            background: rgba(218,165,32,0.1);
+        }
+        
+        /* Маркеры пути на карте (Заклепки) */
+        .pulse-marker {
+            background-color: var(--gold);
+            border-radius: 50%;
+            border: 2px solid #000;
+            box-shadow: 0 0 0 rgba(218, 165, 32, 0.4);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(218, 165, 32, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(218, 165, 32, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(218, 165, 32, 0); }
+        }
+
+        /* Кораблик */
+        .ship-icon {
+            font-size: 28px;
+            filter: drop-shadow(0 0 10px rgba(218, 165, 32, 0.8));
+            transition: transform 0.1s;
+        }
+
+        /* Кастомный попап Leaflet */
+        .leaflet-popup-content-wrapper {
+            background: var(--panel-bg) !important;
+            color: var(--text-light) !important;
+            border: 1px solid var(--gold) !important;
+            border-radius: 0 !important;
+            padding: 0 !important;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.9) !important;
+        }
+        .leaflet-popup-tip { background: var(--panel-bg) !important; border: 1px solid var(--gold); }
+        .leaflet-popup-content { margin: 0 !important; width: 250px !important; }
+
+        /* Текстовые метки на карте (Исторические названия) */
+        .map-label {
+            font-family: 'Cinzel', serif;
+            font-size: 14px;
+            letter-spacing: 3px;
+            text-align: center;
+            white-space: nowrap;
+            pointer-events: none; /* Клик проходит сквозь текст на карту */
+            text-shadow: 2px 2px 5px #000, -1px -1px 2px #000;
+        }
+        .map-label.sea { color: #708a99; font-style: italic; }
+        .map-label.region { color: #8a7a5c; font-size: 20px; font-weight: 700; opacity: 0.5; text-transform: uppercase; }
+        .map-label.empire { color: #8b0000; font-size: 16px; font-weight: 700; opacity: 0.8; text-transform: uppercase; }
+
+        /* Контейнер для изображений */
+        .hist-img {
+            width: 100%; height: 100%;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            position: relative;
+            overflow: hidden;
+        }
+        /* Красивый фон-заглушка в едином стиле */
+        .hist-img::before {
+            content: '';
+            position: absolute; inset: 0;
+            background: 
+                radial-gradient(ellipse at 30% 40%, rgba(218,165,32,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 60%, rgba(139,0,0,0.1) 0%, transparent 60%),
+                linear-gradient(160deg, #0f0a02 0%, #1c1408 30%, #100e08 60%, #0a0805 100%);
+            z-index: 0;
+            transition: opacity 0.6s;
+        }
+        .hist-img.loaded::before { opacity: 0; }
+        /* Орнаментальная рамка */
+        .hist-img::after {
+            content: '';
+            position: absolute; inset: 8px;
+            border: 1px solid rgba(218,165,32,0.12);
+            z-index: 1;
+            pointer-events: none;
+            transition: opacity 0.6s;
+        }
+        .hist-img.loaded::after { opacity: 0; }
+        /* Иконка-символ поверх заглушки */
+        .hist-img .img-icon {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 2;
+            gap: 6px;
+            transition: opacity 0.6s;
+        }
+        .hist-img.loaded .img-icon { opacity: 0; pointer-events: none; }
+        .hist-img .img-icon .icon-sym {
+            font-size: 42px;
+            opacity: 0.35;
+            filter: drop-shadow(0 0 12px rgba(218,165,32,0.5));
+        }
+        .hist-img .img-icon .icon-lbl {
+            font-family: 'Cinzel', serif;
+            font-size: 9px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: rgba(218,165,32,0.4);
+        }
+        /* Иконки для секции товаров */
+        .goods-icon {
+            width: 48px; height: 40px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px;
+            background: #111;
+            border: 1px solid #333;
+        }
+
+        /* Вкладки маршрутов */
+        .route-tab {
+            padding: 6px 12px;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            border: 1px solid #333;
+            background: #111;
+            color: #888;
+            transition: all 0.3s;
+        }
+        .route-tab.active {
+            background: #daa520;
+            color: #000;
+            border-color: #daa520;
+        }
+        .route-tab:hover:not(.active) {
+            border-color: #daa520;
+            color: #daa520;
+        }
+
+        /* Секция исторических персон */
+        .person-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            background: #111;
+            border: 1px solid #333;
+            transition: border-color 0.3s;
+        }
+        .person-card:hover {
+            border-color: #daa520;
+        }
+        .person-avatar {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            border: 2px solid #daa520;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px;
+            background: #1c1c1c;
+            flex-shrink: 0;
+        }
+
+        /* Факт дня */
+        .fact-box {
+            background: linear-gradient(135deg, #1a1208, #111);
+            border: 1px solid #daa520;
+            border-left: 4px solid #daa520;
+            padding: 12px;
+            margin-top: 12px;
+        }
+
+        /* Панель викторины */
+        #quiz-panel {
+            position: fixed;
+            bottom: 120px;
+            right: 20px;
+            z-index: 50;
+            width: 320px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .quiz-option {
+            padding: 8px 12px;
+            background: #111;
+            border: 1px solid #333;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+        .quiz-option:hover {
+            border-color: #daa520;
+            color: #daa520;
+        }
+        .quiz-option.correct {
+            border-color: #228b22;
+            background: rgba(34,139,34,0.15);
+            color: #4ade80;
+        }
+        .quiz-option.wrong {
+            border-color: #8b0000;
+            background: rgba(139,0,0,0.15);
+            color: #ff6b6b;
+        }
+
+        /* Кнопка викторины */
+        #quiz-toggle {
+            letter-spacing: 1px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        /* ============================================
+           МОБИЛЬНАЯ АДАПТАЦИЯ
+        ============================================ */
+
+        /* Мобильный таббар снизу */
+        #mobile-tabbar {
+            display: none;
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            z-index: 200;
+            background: rgba(15,15,17,0.98);
+            border-top: 1px solid #333;
+            height: 60px;
+        }
+        .mob-tab {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            cursor: pointer;
+            color: #666;
+            font-family: 'Cinzel', serif;
+            font-size: 9px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            border: none;
+            background: none;
+            transition: color 0.25s;
+            padding: 6px 4px;
+        }
+        .mob-tab .tab-icon { font-size: 18px; line-height: 1; }
+        .mob-tab.active { color: var(--gold); }
+        .mob-tab:active { background: rgba(218,165,32,0.06); }
+
+        /* Мобильные панели-ящики (drawers) */
+        .mobile-drawer {
+            display: none;
+            position: fixed;
+            left: 0; right: 0; bottom: 60px;
+            z-index: 150;
+            max-height: 65vh;
+            overflow-y: auto;
+            background: rgba(17,17,17,0.98);
+            border-top: 2px solid var(--gold);
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.8);
+            transform: translateY(100%);
+            transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+        }
+        .mobile-drawer.open {
+            transform: translateY(0);
+        }
+
+        /* Мобильный слайдер эпох — горизонтальная полоса вверху */
+        #mobile-timeline {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 100;
+            background: rgba(15,15,17,0.95);
+            border-bottom: 1px solid #333;
+            padding: 8px 16px 6px;
+        }
+        #mobile-timeline .mob-years {
+            display: flex;
+            justify-content: space-between;
+            font-family: 'Cinzel', serif;
+            font-size: 10px;
+            color: var(--gold);
+            margin-bottom: 4px;
+        }
+        #mobile-timeline #mobile-epoch-label {
+            text-align: center;
+            font-family: 'Cinzel', serif;
+            font-size: 11px;
+            color: #fff;
+            font-weight: bold;
+            margin-top: 4px;
+            letter-spacing: 1px;
+        }
+
+        @media (max-width: 767px) {
+            /* Скрываем десктопный UI */
+            #ui-layer { display: none !important; }
+
+            /* Показываем мобильные элементы */
+            #mobile-tabbar { display: flex; }
+            #mobile-timeline { display: block; }
+
+            /* Карта занимает весь экран */
+            #map-container {
+                height: 100vh;
+            }
+
+            /* Модалки — полный экран на мобильном */
+            #region-modal > div,
+            #city-modal > div,
+            #quiz-modal > div {
+                max-width: 100% !important;
+                width: 100% !important;
+                height: 100% !important;
+                max-height: 100% !important;
+                border-radius: 0 !important;
+                flex-direction: column !important;
+                margin: 0 !important;
+            }
+            #city-modal {
+                align-items: flex-start !important;
+            }
+            #city-modal > div .md\:w-1\/2 {
+                width: 100% !important;
+                height: 200px !important;
+                min-height: 200px !important;
+            }
+            #quiz-modal > div {
+                border: none !important;
+                border-top: 2px solid var(--gold) !important;
+            }
+
+            /* Листлет зум-кнопки — сдвигаем от таббара */
+            .leaflet-control-zoom {
+                margin-bottom: 70px !important;
+            }
+
+            /* Слайдер на мобильном */
+            input[type=range]::-webkit-slider-thumb {
+                height: 28px;
+                width: 16px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            /* Скрываем мобильные элементы на десктопе */
+            #mobile-tabbar { display: none !important; }
+            #mobile-timeline { display: none !important; }
+            .mobile-drawer { display: none !important; }
+        }
+
+        /* Анимированные реки (эффект живой воды) с ховером */
+        @keyframes riverFlowAnimation {
+            from {
+                stroke-dashoffset: 40;
+            }
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+        .river-glow {
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            filter: drop-shadow(0 0 5px rgba(100, 181, 246, 0.8));
+            transition: stroke-width 0.3s, opacity 0.3s, filter 0.3s;
+        }
+        .river-core {
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            cursor: pointer;
+            transition: stroke 0.3s, opacity 0.3s;
+        }
+        .river-flow {
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            animation: riverFlowAnimation 2.2s linear infinite;
+            pointer-events: none; /* Flow dashes don't block clicks */
+        }
+        .leaflet-interactive {
+            outline: none !important;
+        }
+        .custom-river-tooltip {
+            background: none !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            white-space: normal !important;
+            width: 220px !important;
+        }
+        .custom-river-tooltip::before {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Слой карты -->
+    <div id="map-container">
+        <div id="map"></div>
+    </div>
+
+    <!-- UI Слой поверх карты -->
+    <div id="ui-layer">
+        <!-- Верхняя часть: Энциклопедия и Симуляция -->
+        <div id="ui-top">
+            
+            <!-- Левая колонка (Летопись) -->
+            <div class="interactive-panel w-full md:w-[350px] flex flex-col transition-all duration-500 max-h-64 md:max-h-full overflow-hidden border-l-4 border-[#daa520] flex-shrink-0">
+                <div class="h-32 md:h-48 w-full relative overflow-hidden bg-black shrink-0">
+                    <div id="epoch-image" class="hist-img">
+                        <div class="img-icon" id="epoch-img-icon">
+                            <div class="icon-sym">📜</div>
+                            <div class="icon-lbl">Летопись</div>
+                        </div>
+                    </div>
+                    <div class="absolute bottom-2 left-4 z-10">
+                        <span class="text-[10px] text-[#daa520] uppercase font-bold tracking-widest font-cinzel bg-black/80 px-2 py-1 border border-[#daa520]">Летопись</span>
+                    </div>
+                </div>
+
+                <div class="p-5 flex-1 overflow-y-auto">
+                    <h2 id="epoch-title" class="text-2xl font-black mb-1 font-cinzel text-white leading-tight">Загрузка...</h2>
+                    <div class="text-[#daa520] text-sm font-bold mb-4 font-cinzel border-b border-[#333] pb-2" id="epoch-year">Годъ</div>
+                    <p id="epoch-desc" class="text-sm font-light leading-relaxed text-[#b0b0b0] mb-4"></p>
+                    
+                    <div class="bg-[#111] p-3 border border-[#333] mb-3">
+                        <h3 class="text-xs text-[#daa520] font-bold uppercase mb-2 font-cinzel tracking-wider">Важнейшие события</h3>
+                        <ul id="epoch-events" class="text-xs space-y-2 text-[#999] list-disc pl-4"></ul>
+                    </div>
+
+                    <!-- Исторические личности эпохи -->
+                    <div class="mb-3">
+                        <h3 class="text-xs text-[#daa520] font-bold uppercase mb-2 font-cinzel tracking-wider">Ключевые фигуры</h3>
+                        <div id="epoch-persons" class="space-y-2"></div>
+                    </div>
+
+                    <!-- Факт эпохи -->
+                    <div class="fact-box">
+                        <div class="text-[10px] text-[#daa520] uppercase font-bold font-cinzel mb-1">📜 Историческая справка</div>
+                        <p id="epoch-fact" class="text-xs text-[#b0b0b0] font-light leading-relaxed"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Правая колонка (Экспедиция) -->
+            <div class="interactive-panel w-full md:w-[300px] mt-4 md:mt-0 border-r-4 border-[#daa520] flex flex-col overflow-hidden">
+                <!-- Декоративный баннер корабля -->
+                <div class="w-full h-28 relative overflow-hidden bg-black shrink-0">
+                    <div id="expedition-banner" class="hist-img loaded" style="background: url('assets/images/city_ladoga.png') center 30%/cover no-repeat">
+                        <div id="expedition-banner-icon" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:52px;opacity:0.25;">⛵</div>
+                    </div>
+                    <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/70"></div>
+                    <div class="absolute bottom-2 left-3">
+                        <span class="text-[10px] text-[#daa520] uppercase font-bold tracking-widest font-cinzel bg-black/70 px-2 py-1 border border-[#daa520]">Экспедиция</span>
+                    </div>
+                </div>
+
+                <div class="p-5 flex flex-col gap-3">
+                    <!-- Вкладки маршрутов -->
+                    <div class="flex gap-1 mb-1">
+                        <button class="route-tab active font-cinzel" data-route="varyagi" onclick="switchRoute('varyagi')">Из варяг в греки</button>
+                        <button class="route-tab font-cinzel" data-route="volga" onclick="switchRoute('volga')">Волжский путь</button>
+                    </div>
+
+                    <div class="mb-1">
+                        <label class="block text-xs text-[#daa520] font-bold mb-1 font-cinzel">Откуда:</label>
+                        <select id="route-start" class="w-full bg-[#111] text-white p-2 border border-[#333] text-sm focus:border-[#daa520] outline-none font-cinzel">
+                        </select>
+                    </div>
+                    
+                    <div class="mb-1">
+                        <label class="block text-xs text-[#daa520] font-bold mb-1 font-cinzel">Куда:</label>
+                        <select id="route-end" class="w-full bg-[#111] text-white p-2 border border-[#333] text-sm focus:border-[#daa520] outline-none font-cinzel">
+                        </select>
+                    </div>
+
+                    <button id="start-btn" class="w-full btn-medieval font-cinzel font-bold text-sm py-3 uppercase tracking-wider">Поднять паруса</button>
+
+                    <!-- Торговые товары (динамические по маршруту) -->
+                    <div class="bg-[#111] border border-[#333] p-2">
+                        <div class="text-[10px] text-[#daa520] uppercase font-bold font-cinzel mb-2 tracking-wider">Товары в трюме</div>
+                        <div id="goods-grid" class="grid grid-cols-4 gap-1">
+                        </div>
+                    </div>
+
+                    <!-- Торговая экономика -->
+                    <div class="bg-[#111] border border-[#333] p-2">
+                        <div class="text-[10px] text-[#daa520] uppercase font-bold font-cinzel mb-2 tracking-wider">💰 Экономика пути</div>
+                        <div id="trade-economics" class="text-[10px] text-[#999] space-y-1"></div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 text-center">
+                        <div class="bg-[#111] p-2 border border-[#333]">
+                            <div class="text-[10px] text-[#daa520] uppercase font-bold font-cinzel">Поприщъ (вёрст)</div>
+                            <div id="stat-dist" class="text-lg font-cinzel font-bold text-white transition-all">0</div>
+                        </div>
+                        <div class="bg-[#111] p-2 border border-[#333]">
+                            <div class="text-[10px] text-[#daa520] uppercase font-bold font-cinzel">Дней в пути</div>
+                            <div id="stat-days" class="text-lg font-cinzel font-bold text-white transition-all">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div><!-- /ui-top -->
+    </div><!-- /ui-layer -->
+
+    <!-- Нижняя часть: Таймлайн (Слайдер) — всегда фиксирован к низу -->
+    <div id="ui-bottom">
+        <div class="interactive-panel w-full max-w-4xl p-6 border-b-4 border-[#daa520]" style="pointer-events:auto;">
+                <!-- Строка управления (всегда видна) -->
+                <div class="timeline-toggle-row flex items-center justify-between mb-3 gap-3">
+                    <span class="font-cinzel text-xs text-[#666] uppercase tracking-widest">⏳ Таймлайн эпох</span>
+                    <div class="flex gap-2">
+                        <button id="quiz-toggle" onclick="openQuiz()" class="btn-medieval font-cinzel font-bold text-xs py-2 px-4">
+                            📝 Викторина
+                        </button>
+                        <button class="timeline-toggle-btn" id="timeline-collapse-btn" onclick="toggleTimeline()" title="Скрыть/показать слайдер">
+                            🔼 Скрыть
+                        </button>
+                    </div>
+                </div>
+                <!-- Коллапсируемое содержимое -->
+                <div id="timeline-body">
+                    <div class="flex justify-between text-[#daa520] text-sm font-bold font-cinzel mb-4 px-2">
+                        <span>862</span>
+                        <span>1054</span>
+                        <span>1237</span>
+                        <span>1380</span>
+                        <span>1462</span>
+                    </div>
+                    <input type="range" id="timeline" min="0" max="4" value="1" step="1">
+                    <div class="flex items-center mt-3">
+                        <div class="font-cinzel text-base font-bold tracking-widest text-white flex-1" id="current-year-display">
+                            Эпоха: Золотой век (1019–1054 гг.)
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно Региона -->
+    <div id="region-modal" class="fixed inset-0 bg-black/90 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300 z-[100] p-4">
+        <div class="bg-[#1c1c1c] border-2 border-[#daa520] shadow-[0_0_50px_rgba(0,0,0,1)] max-w-2xl w-full relative overflow-hidden transform scale-95 transition-transform duration-300" id="region-modal-content">
+            <button onclick="closeRegionModal()" class="absolute top-2 right-3 text-[#daa520] text-3xl hover:text-white z-20 transition-colors">&times;</button>
+            <div class="w-full h-56 relative bg-black border-b border-[#333]">
+                <div id="modal-img" class="hist-img">
+                    <div class="img-icon" id="region-img-icon">
+                        <div class="icon-sym">🏰</div>
+                        <div class="icon-lbl">Княжество</div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-8">
+                <h2 id="modal-title" class="text-3xl font-black text-white mb-4 font-cinzel border-b border-[#333] pb-2">Название</h2>
+                <div id="modal-desc" class="text-[#b0b0b0] font-light leading-relaxed text-sm h-40 overflow-y-auto pr-2">Описание</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно Города -->
+    <div id="city-modal" class="fixed inset-0 bg-black/95 flex flex-col items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300 z-[110] p-4">
+        <div class="bg-[#111] border-2 border-[#daa520] max-w-4xl w-full relative flex flex-col md:flex-row overflow-hidden transform scale-95 transition-transform duration-300" id="city-modal-content">
+            <button onclick="closeCityModal()" class="absolute top-2 right-3 text-[#daa520] text-3xl hover:text-white z-20 transition-colors">&times;</button>
+            
+            <div class="w-full md:w-1/2 h-64 md:h-auto relative bg-black border-b md:border-b-0 md:border-r border-[#333]">
+                <div id="city-modal-img" class="hist-img" style="min-height:256px">
+                    <div class="img-icon" id="city-img-icon">
+                        <div class="icon-sym">🏚️</div>
+                        <div class="icon-lbl">Торговый градъ</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-6 md:p-8 w-full md:w-1/2 flex flex-col bg-[#1c1c1c]">
+                <span class="text-[10px] text-[#daa520] uppercase font-bold tracking-widest font-cinzel mb-1">Торговый узел</span>
+                <h2 id="city-modal-title" class="text-3xl font-black text-white mb-4 font-cinzel border-b border-[#333] pb-2">Название</h2>
+                <div class="overflow-y-auto max-h-80 pr-2 space-y-4 text-sm text-[#ccc] font-light">
+                    <div>
+                        <h4 class="text-[#daa520] font-bold mb-1 font-cinzel">История:</h4>
+                        <p id="city-modal-history" class="leading-relaxed"></p>
+                    </div>
+                    <div class="bg-[#111] p-3 border border-[#333]">
+                        <h4 class="text-[#daa520] font-bold mb-2 font-cinzel text-xs uppercase">Ключевые события:</h4>
+                        <ul id="city-modal-events" class="list-disc pl-4 space-y-1 text-xs text-[#999]"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Модальное окно Викторины -->
+    <div id="quiz-modal" class="fixed inset-0 bg-black/90 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300 z-[120] p-4">
+        <div class="quiz-modal-content bg-[#111] border-2 border-[#daa520] w-full max-w-lg relative transform scale-95 transition-transform duration-300 shadow-[0_0_60px_rgba(218,165,32,0.2)]">
+            <!-- Шапка -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-[#333]">
+                <div>
+                    <div class="text-[10px] text-[#daa520] uppercase font-bold font-cinzel tracking-widest mb-1">Испытание знаний</div>
+                    <h3 class="text-lg font-black text-white font-cinzel">Торговые пути Руси</h3>
+                </div>
+                <button onclick="closeQuiz()" class="text-[#daa520] hover:text-white text-3xl leading-none transition-colors ml-4">&times;</button>
+            </div>
+            <!-- Тело -->
+            <div id="quiz-body" class="p-6 min-h-[280px]"></div>
+            <!-- Подвал -->
+            <div class="px-6 pb-4 text-[10px] text-[#444] font-cinzel text-center">
+                Всего в базе: 30 вопросов · Показывается 10 случайных
+            </div>
+        </div>
+    </div>
+
+    <!-- Уведомление (Toast) -->
+    <div id="toast" class="fixed top-5 left-1/2 transform -translate-x-1/2 bg-[#8b0000] text-white px-6 py-3 border border-[#daa520] font-cinzel font-bold text-sm shadow-2xl transition-all duration-300 opacity-0 pointer-events-none z-[1000] mt-[-20px]">
+        Сообщение
+    </div>
+
+    <script src="app.js"></script>
+
+    <script>
+        // Инициализация карты
+        const map = L.map('map', {
+            zoomControl: false,
+            minZoom: 4,
+            maxZoom: 7
+        }).setView([53.0, 32.0], 5);
+
+        // Создаем отдельный слой (pane) для рек, расположенный СВЕРХУ границ государств (overlayPane, 400),
+        // это гарантирует, что реки всегда будут кликабельны и интерактивны при любых границах!
+        map.createPane('riversPane');
+        map.getPane('riversPane').style.zIndex = 450;
+        map.getPane('riversPane').style.pointerEvents = 'auto';
+
+        // Используем самую "чистую" темную карту без английских названий городов!
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap',
+            subdomains: 'abcd',
+            noWrap: true
+        }).addTo(map);
+
+        L.control.zoom({ position: 'topright' }).addTo(map);
+
+        // --- ДОБАВЛЯЕМ РУССКИЕ НАДПИСИ НА КАРТУ ВРУЧНУЮ ---
+        const geoLabels = [
+            { coords: [58.5, 19.5], text: "ВАРЯЖСКОЕ МОРЕ", class: "sea" },
+            { coords: [43.0, 33.0], text: "РУССКОЕ МОРЕ<br><span style='font-size:10px'>(Понт Эвксинский)</span>", class: "sea" },
+            { coords: [46.5, 36.5], text: "МЕОТИЙСКОЕ ОЗЕРО", class: "sea" },
+            { coords: [49.5, 36.0], text: "ПОЛОВЕЦКАЯ СТЕПЬ", class: "region" },
+            { coords: [55.0, 38.0], text: "ЗАЛЕСЬЕ", class: "region" },
+            { coords: [60.0, 42.0], text: "СЕВЕРНЫЕ ЗЕМЛИ", class: "region" },
+            { coords: [42.0, 50.0], text: "КАСПИЙСКОЕ МОРЕ<br><span style='font-size:10px'>(Хвалисское)</span>", class: "sea" },
+            { coords: [53.0, 50.0], text: "ВОЛЖСКАЯ БУЛГАРИЯ", class: "empire" },
+            { coords: [47.0, 46.0], text: "ХАЗАРСКИЙ КАГАНАТ", class: "empire" },
+            { coords: [40.5, 26.0], text: "ВИЗАНТИЯ", class: "empire" }
+        ];
+
+        geoLabels.forEach(label => {
+            L.marker(label.coords, {
+                icon: L.divIcon({
+                    className: `map-label ${label.class}`,
+                    html: label.text,
+                    iconSize: [200, 40]
+                }),
+                interactive: false
+            }).addTo(map);
+        });
+        // ----------------------------------------------------
+
+        // --- ДИНАМИЧЕСКИЕ ВЫСОКОТОЧНЫЕ АНИМИРОВАННЫЕ РЕКИ С ИНТЕРАКТИВНОСТЬЮ ---
+        // Функция Catmull-Rom интерполяции для сглаживания до естественного вида рек
+        function getCatmullRomSpline(points, segments = 12) {
+            if (points.length < 2) return points;
+            const result = [];
+            const p = [points[0], ...points, points[points.length - 1]];
+            for (let i = 1; i < p.length - 2; i++) {
+                const p0 = p[i - 1];
+                const p1 = p[i];
+                const p2 = p[i + 1];
+                const p3 = p[i + 2];
+                for (let j = 0; j < segments; j++) {
+                    const t = j / segments;
+                    const t2 = t * t;
+                    const t3 = t2 * t;
+                    const lat = 0.5 * (
+                        (2 * p1[0]) +
+                        (-p0[0] + p2[0]) * t +
+                        (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 +
+                        (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3
+                    );
+                    const lng = 0.5 * (
+                        (2 * p1[1]) +
+                        (-p0[1] + p2[1]) * t +
+                        (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 +
+                        (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3
+                    );
+                    result.push([lat, lng]);
+                }
+            }
+            result.push(points[points.length - 1]);
+            return result;
+        }
+
+        // Высокоточные географические координаты, соответствующие фактическим руслам рек OpenStreetMap
+        const mapRivers = [
+            {
+                name: "Днепр",
+                minWeight: 1.5,
+                maxWeight: 4.5,
+                coords: [
+                    [55.87, 33.72], [54.93, 33.30], [54.782, 32.045], [54.51, 30.42], 
+                    [54.21, 30.30], [53.90, 30.33], [53.52, 30.25], [53.09, 30.05], 
+                    [52.89, 30.04], [52.36, 30.39], [51.80, 30.80], [51.15, 30.60], 
+                    [50.45, 30.52], [49.75, 31.46], [49.44, 32.00], [49.06, 33.41], 
+                    [48.51, 34.61], [48.46, 35.04], [47.83, 35.15], [47.56, 34.40], 
+                    [46.80, 33.48], [46.63, 32.61]
+                ],
+                desc: "Важнейшая артерия пути «Из варяг в греки», связывавшая Смоленск, Киев и дававшая выход к Черному морю."
+            },
+            {
+                name: "Волга",
+                minWeight: 1.8,
+                maxWeight: 6.0,
+                coords: [
+                    [57.25, 32.47], [56.86, 35.91], [56.74, 37.16], [56.87, 37.35], 
+                    [57.52, 38.31], [57.78, 38.45], [58.05, 38.83], [57.87, 39.54], 
+                    [57.62, 39.87], [57.77, 40.93], [57.44, 42.17], [57.32, 43.11], 
+                    [56.64, 43.47], [56.32, 44.00], [56.03, 45.02], [56.34, 46.56], 
+                    [56.15, 47.24], [55.85, 48.52], [55.79, 49.11], [54.31, 48.40], 
+                    [53.51, 49.41], [53.20, 50.15], [53.15, 48.47], [52.48, 48.10], 
+                    [52.03, 47.80], [51.54, 46.03], [50.08, 45.40], [48.70, 44.51], 
+                    [47.80, 46.00], [46.35, 48.04]
+                ],
+                desc: "Великий Волжский торговый путь, связывавший Русь с Волжской Булгарией, Хазарским каганатом и Каспием."
+            },
+            {
+                name: "Ловать",
+                minWeight: 1.2,
+                maxWeight: 2.8,
+                coords: [
+                    [55.80, 30.60], [56.00, 30.70], [56.34, 30.53], [56.80, 30.90], 
+                    [57.15, 31.18], [57.60, 31.40], [57.90, 31.35], [58.28, 31.28]
+                ],
+                desc: "Река, соединявшая волоки Западной Двины и Днепра с озером Ильмень, ключевая часть пути «Из варяг в греки»."
+            },
+            {
+                name: "Волхов",
+                minWeight: 1.8,
+                maxWeight: 3.5,
+                coords: [
+                    [58.48, 31.29], [58.55, 31.33], [58.70, 31.45], [59.15, 31.85], 
+                    [59.45, 32.01], [59.92, 32.33], [59.998, 32.296], [60.12, 32.32]
+                ],
+                desc: "Единственная река, вытекающая из озера Ильмень. Соединяет Великий Новгород и Ладожское озеро (Старую Ладогу)."
+            }
+        ];
+
+        mapRivers.forEach(river => {
+            const smoothed = getCatmullRomSpline(river.coords, 14);
+            const numSegments = smoothed.length - 1;
+            
+            // Разделяем сглаженную реку на 4 зоны по толщине от истока к устью
+            const zones = 4;
+            const ptsPerZone = Math.ceil(numSegments / zones);
+            
+            const glowLayers = [];
+            const bedLayers = [];
+            const flowLayers = [];
+            const coreLayers = [];
+            
+            for (let z = 0; z < zones; z++) {
+                const startIdx = z * ptsPerZone;
+                const endIdx = Math.min((z + 1) * ptsPerZone + 1, smoothed.length);
+                const zoneCoords = smoothed.slice(startIdx, endIdx);
+                if (zoneCoords.length < 2) continue;
+                
+                // Прогрессивная толщина зоны
+                const coreWeight = river.minWeight + (river.maxWeight - river.minWeight) * (z / (zones - 1));
+                
+                // 1. Мягкое глубинное свечение под рекой (в выделенном слое под границами)
+                const glow = L.polyline(zoneCoords, {
+                    pane: 'riversPane',
+                    className: 'river-glow',
+                    color: '#2196f3',
+                    weight: coreWeight * 2.2,
+                    opacity: 0.15,
+                    interactive: false
+                }).addTo(map);
+                
+                // 2. Глубокое темно-синее ложе реки (в выделенном слое под границами)
+                const bed = L.polyline(zoneCoords, {
+                    pane: 'riversPane',
+                    color: '#123049',
+                    weight: coreWeight,
+                    opacity: 0.85,
+                    interactive: false
+                }).addTo(map);
+                
+                // 3. Светло-голубая струя течения с бегущей CSS-анимацией (в выделенном слое под границами)
+                const flow = L.polyline(zoneCoords, {
+                    pane: 'riversPane',
+                    className: 'river-flow',
+                    color: '#64b5f6',
+                    weight: coreWeight * 0.45,
+                    opacity: 0.75,
+                    dashArray: '5, 15',
+                    interactive: false
+                }).addTo(map);
+                
+                // 4. Тонкое полупрозрачное интерактивное ядро (ловчий ховера и кликов)
+                const core = L.polyline(zoneCoords, {
+                    pane: 'riversPane',
+                    className: 'river-core',
+                    color: '#64b5f6',
+                    weight: Math.max(coreWeight * 1.5, 6), // Делаем зону клика чуть шире для удобства
+                    opacity: 0.05, // Почти невидимая линия, которая идеально ловит мышь
+                    interactive: true
+                }).addTo(map);
+                
+                glowLayers.push(glow);
+                bedLayers.push(bed);
+                flowLayers.push(flow);
+                coreLayers.push(core);
+            }
+            
+            const tooltipContent = `
+                <div class="p-3 bg-[#111]/95 border border-[#64b5f6] rounded-md shadow-2xl max-w-[220px]" style="pointer-events: none; backdrop-filter: blur(4px);">
+                    <div style="font-family:'Cinzel',serif;font-size:11px;color:#64b5f6;font-weight:bold;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;border-bottom:1px solid #333;padding-bottom:2px;">Река ${river.name}</div>
+                    <div style="font-size:10px;color:#ccc;line-height:1.4;font-family:'Merriweather',serif;">${river.desc}</div>
+                </div>
+            `;
+            
+            // Обработчики событий ховера и тултипа для ВСЕЙ реки в сборе
+            coreLayers.forEach(coreLayer => {
+                coreLayer.bindTooltip(tooltipContent, {
+                    sticky: true,
+                    className: 'custom-river-tooltip'
+                });
+                
+                coreLayer.on('mouseover', () => {
+                    // Подсвечиваем все сегменты реки целиком
+                    flowLayers.forEach(f => f.setStyle({ color: '#e0f7fa', opacity: 0.95 }));
+                    bedLayers.forEach(b => b.setStyle({ color: '#1a3c5a', opacity: 0.95 }));
+                    glowLayers.forEach((g, idx) => {
+                        const w = river.minWeight + (river.maxWeight - river.minWeight) * (idx / (zones - 1));
+                        g.setStyle({ opacity: 0.7, weight: w * 4.5, color: '#00e5ff' });
+                    });
+                });
+                
+                coreLayer.on('mouseout', () => {
+                    // Возвращаем исходный вид
+                    flowLayers.forEach(f => f.setStyle({ color: '#64b5f6', opacity: 0.75 }));
+                    bedLayers.forEach(b => b.setStyle({ color: '#123049', opacity: 0.85 }));
+                    glowLayers.forEach((g, idx) => {
+                        const w = river.minWeight + (river.maxWeight - river.minWeight) * (idx / (zones - 1));
+                        g.setStyle({ opacity: 0.15, weight: w * 2.2, color: '#2196f3' });
+                    });
+                });
+            });
+        });
+        // ----------------------------------------------------
+
+        // Иконки
+        const mainIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: "<div class='pulse-marker w-4 h-4'></div>",
+            iconSize: [16, 16],
+            iconAnchor: [8, 8]
+        });
+
+        const shipIcon = L.divIcon({
+            className: 'ship-icon',
+            html: "<div class='ship-icon'>⛵</div>",
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
+        });
+
+        // Надежные ссылки из Wikimedia Commons
+        const waypoints = [
+            { 
+              id: "ladoga", 
+              name: "Старая Ладога", 
+              coords: [59.998, 32.296], 
+              img: "assets/images/city_ladoga.png",
+              icon: "🏔️", iconLabel: "Старая Ладога",
+              desc: "Первая столица Руси и северные ворота пути «Из варяг в греки».",
+              history: "Основана в VIII веке. Крупнейший контактный центр между скандинавским миром и местными славянскими племенами. Сюда, согласно летописям, в 862 году прибыл княжить Рюрик.",
+              events: ["862 г. — Призвание варягов", "1114 г. — Возведение каменной крепости", "Сбор пушнины с северных племен"]
+            },
+            { 
+              id: "novgorod", 
+              name: "Великий Новгород", 
+              coords: [58.521, 31.271], 
+              img: "assets/images/city_novgorod.png",
+              icon: "⚖️", iconLabel: "Вече Новгорода",
+              desc: "Торговая боярская республика. Крупнейший экспортер пушнины.",
+              history: "Один из древнейших городов Руси. Управлялся народным собранием (Вече). Благодаря удачному расположению избежал разрушения монголами и стал главным окном на Запад, торгуя с Ганзейским союзом.",
+              events: ["882 г. — Поход Олега на Киев", "1136 г. — Установление боярской республики", "1240 г. — Невская битва"]
+            },
+            { 
+              id: "smolensk", 
+              name: "Смоленск", 
+              coords: [54.782, 32.045], 
+              img: "assets/images/city_smolensk.png",
+              icon: "🚣", iconLabel: "Город на волоках",
+              desc: "Город на волоках. Перевалочный пункт из Западной Двины в Днепр.",
+              history: "Столица племени кривичей. Суда здесь вытаскивали на берег и перетаскивали волоком по земле между реками. За контроль над этим узлом всегда шли ожесточенные войны.",
+              events: ["882 г. — Присоединение к Киеву", "XII век — Расцвет каменного зодчества", "1404 г. — Вхождение в состав Литвы"]
+            },
+            { 
+              id: "kiev", 
+              name: "Киев", 
+              coords: [50.450, 30.523], 
+              img: "assets/images/city_kiev.png",
+              icon: "⛪", iconLabel: "Мать городов",
+              desc: "«Мать городов русских». Политический и духовный центр Руси.",
+              history: "Расположенный на крутых холмах Днепра, Киев контролировал весь южный торговый трафик. При Владимире Великом и Ярославе Мудром стал одним из крупнейших городов Европы.",
+              events: ["988 г. — Крещение Руси", "1037 г. — Строительство Софийского собора", "1240 г. — Разрушение ханом Батыем"]
+            },
+            { 
+              id: "constantinople", 
+              name: "Царьград", 
+              coords: [41.008, 28.978], 
+              img: "assets/images/city_constantinople.png",
+              icon: "🌙", iconLabel: "Царьград",
+              desc: "Столица Византийской империи. Конечная цель пути.",
+              history: "Крупнейший мегаполис Средневековья. Русские купцы везли сюда меха, воск и рабов, закупая шёлк и пряности. Торговый путь пришел в упадок задолго до падения города в 1453 году (особенно после разгрома в 1204 г.).",
+              events: ["907 г. — Победоносный поход Олега", "941 г. — Применение «греческого огня»", "1204 г. — Разгром крестоносцами (упадок пути)", "1453 г. — Захват турками-османами"]
+            }
+        ];
+
+        const geoJsonData = {
+            year1054: {
+                type: "FeatureCollection",
+                features: [{
+                    type: "Feature",
+                    properties: { 
+                        name: "Киевская Русь", color: "#2c5228",
+                        img: "assets/images/region_kievan_rus.png",
+                        desc: "При Ярославе Мудром государство достигает пика могущества. Границы простираются от Балтики до Черного моря. Заключаются династические браки с монархами Европы."
+                    },
+                    geometry: { type: "Polygon", coordinates: [[[28, 60], [38, 60], [42, 57], [38, 50], [30, 48], [24, 50], [28, 60]]] }
+                }]
+            },
+            year1237: {
+                type: "FeatureCollection",
+                features: [
+                    {
+                        type: "Feature",
+                        properties: { 
+                            name: "Новгородская земля", color: "#1e3a8a",
+                            img: "assets/images/city_novgorod.png",
+                            desc: "Независимая боярская республика, избежавшая разорения Батыем. Торгует мехами с Северной Европой."
+                        },
+                        geometry: { type: "Polygon", coordinates: [[[28, 63], [45, 63], [42, 58], [30, 58], [28, 63]]] }
+                    },
+                    {
+                        type: "Feature",
+                        properties: { 
+                            name: "Раздробленные княжества", color: "#8b0000",
+                            img: "assets/images/epoch_1237.png",
+                            desc: "Бывшее ядро государства распалось. Накануне катастрофического монгольского вторжения."
+                        },
+                        geometry: { type: "Polygon", coordinates: [[[26, 52], [36, 52], [35, 48], [26, 48], [26, 52]]] }
+                    }
+                ]
+            },
+            year1462: {
+                type: "FeatureCollection",
+                features: [
+                    {
+                        type: "Feature",
+                        properties: { 
+                            name: "Московское княжество", color: "#b91c1c",
+                            img: "assets/images/epoch_1462.png",
+                            desc: "Иван III начинает жесткое объединение русских земель вокруг Москвы. Зарождается концепция «Москва — Третий Рим»."
+                        },
+                        geometry: { type: "Polygon", coordinates: [[[34, 59], [43, 59], [43, 54], [36, 54], [34, 59]]] }
+                    },
+                    {
+                        type: "Feature",
+                        properties: { 
+                            name: "Великое княжество Литовское", color: "#4c1d95",
+                            img: "assets/images/city_vladimir.png",
+                            desc: "Крупнейшее европейское государство, захватившее южные земли (включая Киев и Смоленск). Главный соперник Москвы."
+                        },
+                        geometry: { type: "Polygon", coordinates: [[[23, 56], [33, 56], [34, 48], [23, 48], [23, 56]]] }
+                    }
+                ]
+            }
+        };
+
+        const timelines = [
+            {
+                year: 862,
+                title: "Рождение Руси",
+                dateStr: "862 годъ",
+                desc: "Призвание варягов (Рюрика) в Новгород. Позже, в 882 году, Олег Вещий объединит Новгород и Киев в единое государство. Путь «Из варяг в греки» становится главной торговой артерией. Волжский путь связывает Русь с Арабским Халифатом через Хазарию.",
+                events: ["862 г. — Призвание варягов в Новгород", "882 г. — Олег захватывает Киев", "907 г. — Поход Олега на Царьград", "Начало чеканки монет по арабским образцам"],
+                layer: geoJsonData_882,
+                img: "assets/images/epoch_882.png",
+                icon: "⚔️"
+            },
+            {
+                year: 1054,
+                title: "Золотой век Руси",
+                dateStr: "1019–1054 гг.",
+                desc: "Период расцвета и единства при правлении Ярослава Мудрого. Торговый путь «Из варяг в греки» — главная экономическая артерия, связывающая Северную Европу с Византией. В 1054 году Ярослав умирает, оставляя завещание, что приведет к постепенному распаду государства.",
+                events: ["Великая схизма — раскол церквей (1054)", "Строительство Софийских соборов в Киеве и Новгороде", "Издание «Русской Правды» — первого свода законов", "Династические браки с королями Европы"],
+                layer: geoJsonData.year1054,
+                img: "assets/images/epoch_1054.png",
+                icon: "✍️"
+            },
+            {
+                year: 1237,
+                title: "Раздробленность и нашествие",
+                dateStr: "1237 годъ",
+                desc: "Государство распалось на враждующие княжества. Половцы блокируют нижний Днепр, путь «В греки» приходит в упадок. С востока надвигаются тумены хана Батыя — начинается катастрофа.",
+                events: ["Вторжение монгольской армии Батыя", "Осада и гибель Рязани за 5 дней", "Разрушение Владимира и Суздаля", "1240 г. — Падение Киева"],
+                layer: geoJsonData.year1237,
+                img: "assets/images/epoch_1237.png",
+                icon: "🔥"
+            },
+            {
+                year: 1380,
+                title: "Куликовская битва",
+                dateStr: "1380 годъ",
+                desc: "Дмитрий Донской впервые объединяет русские силы для открытого сражения с Ордой. Победа на Куликовом поле доказала — монголов можно побеждать. Москва утверждается как центр объединения.",
+                events: ["Благословение Сергия Радонежского", "8 сентября — Куликовская битва", "Поединок Пересвета с Челубеем", "Засадный полк решает исход битвы"],
+                layer: geoJsonData_1380,
+                img: "assets/images/epoch_1380.png",
+                icon: "🛡️"
+            },
+            {
+                year: 1462,
+                title: "Возвышение Москвы",
+                dateStr: "1462 годъ",
+                desc: "Начало правления Ивана III. Днепровский путь контролируется Литвой, Византия пала в 1453 году. Торговые векторы смещаются на реку Волгу. Москва провозглашает себя «Третьим Римом».",
+                events: ["Воцарение Ивана III Великого", "1478 г. — Присоединение Новгорода", "1480 г. — Стояние на Угре, конец ига", "Женитьба на Софье Палеолог"],
+                layer: geoJsonData.year1462,
+                img: "assets/images/epoch_1462.png",
+                icon: "👑"
+            }
+        ];
+
+        const routeCoords = waypoints.map(wp => wp.coords);
+        const routeLine = L.polyline(routeCoords, { color: '#daa520', weight: 4, opacity: 0.8, dashArray: '10, 10' }).addTo(map);
+
+        // Волжский путь
+        const volgaRouteCoords = volgaWaypoints.map(wp => wp.coords);
+        const volgaRouteLine = L.polyline(volgaRouteCoords, { color: '#4fc3f7', weight: 3, opacity: 0.6, dashArray: '8, 12' });
+
+        let currentRoute = 'varyagi';
+        let volgaMarkers = [];
+
+        function switchRoute(route) {
+            currentRoute = route;
+            document.querySelectorAll('.route-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`[data-route="${route}"]`).classList.add('active');
+
+            const selectStart = document.getElementById('route-start');
+            const selectEnd = document.getElementById('route-end');
+            selectStart.innerHTML = '';
+            selectEnd.innerHTML = '';
+
+            // Remove/add route lines and markers
+            if (route === 'volga') {
+                routeLine.remove();
+                volgaRouteLine.addTo(map);
+                volgaMarkers.forEach(m => m.addTo(map));
+                volgaWaypoints.forEach(wp => {
+                    selectStart.add(new Option(wp.name, wp.id));
+                    selectEnd.add(new Option(wp.name, wp.id));
+                });
+                selectStart.value = volgaWaypoints[0].id;
+                selectEnd.value = volgaWaypoints[volgaWaypoints.length-1].id;
+            } else {
+                volgaRouteLine.remove();
+                volgaMarkers.forEach(m => m.remove());
+                routeLine.addTo(map);
+                waypoints.forEach(wp => {
+                    selectStart.add(new Option(wp.name, wp.id));
+                    selectEnd.add(new Option(wp.name, wp.id));
+                });
+                selectStart.value = "novgorod";
+                selectEnd.value = "constantinople";
+            }
+
+            renderGoods(route);
+            renderEconomics(route);
+
+            // Обновляем баннеры экспедиции (используем Ладогу и Булгар для исторической достоверности)
+            const bannerImg = route === 'volga' ? 'assets/images/city_bulgar.png' : 'assets/images/city_ladoga.png';
+            const desktopBanner = document.getElementById('expedition-banner');
+            if (desktopBanner) {
+                setHistImg(desktopBanner, bannerImg);
+                desktopBanner.style.backgroundPosition = 'center 30%'; // Лучшее кадрирование для узкого окна
+            }
+            const mobBanner = document.getElementById('mob-expedition-banner');
+            if (mobBanner) {
+                mobBanner.style.backgroundImage = `url('${bannerImg}')`;
+                mobBanner.style.backgroundPosition = 'center 30%';
+            }
+        }
+
+        // Add Volga waypoint markers (hidden initially)
+        volgaWaypoints.forEach(wp => {
+            const marker = L.marker(wp.coords, { icon: mainIcon });
+            marker.bindPopup(`
+                <div class="flex flex-col">
+                    <div style="width:100%;height:96px;background:url('${wp.img}') center/cover no-repeat;background-color:#1c1c1c;border-bottom:1px solid #4fc3f7;"></div>
+                    <div class="p-4 bg-[#1c1c1c]">
+                        <h3 class="text-lg font-bold text-[#4fc3f7] font-cinzel mb-2 leading-none">${wp.name}</h3>
+                        <p class="text-[11px] text-[#ccc] font-light leading-snug mb-3">${wp.desc}</p>
+                        <button onclick="openCityModalVolga('${wp.id}')" class="w-full btn-medieval font-cinzel font-bold text-[10px] py-2 uppercase tracking-widest" style="color:#4fc3f7;border-color:#4fc3f7">Изучить градъ</button>
+                    </div>
+                </div>
+            `);
+            volgaMarkers.push(marker);
+        });
+
+        function openCityModalVolga(cityId) {
+            const wp = volgaWaypoints.find(w => w.id === cityId);
+            if (!wp) return;
+            document.getElementById('city-modal-title').innerText = wp.name;
+            document.getElementById('city-modal-history').innerText = wp.history;
+            const eventsList = document.getElementById('city-modal-events');
+            eventsList.innerHTML = '';
+            wp.events.forEach(ev => { const li = document.createElement('li'); li.innerText = ev; eventsList.appendChild(li); });
+            setHistImg(document.getElementById('city-modal-img'), wp.img);
+            const modal = document.getElementById('city-modal');
+            const content = document.getElementById('city-modal-content');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            content.classList.remove('scale-95');
+            content.classList.add('scale-100');
+            map.closePopup();
+        }
+
+        const selectStart = document.getElementById('route-start');
+        const selectEnd = document.getElementById('route-end');
+
+        waypoints.forEach(wp => {
+            const marker = L.marker(wp.coords, { icon: mainIcon }).addTo(map);
+            
+            marker.bindPopup(`
+                <div class="flex flex-col">
+                    <div style="width:100%;height:96px;background:url('${wp.img}') center/cover no-repeat;background-color:#1c1c1c;border-bottom:1px solid #daa520;"></div>
+                    <div class="p-4 bg-[#1c1c1c]">
+                        <h3 class="text-lg font-bold text-[#daa520] font-cinzel mb-2 leading-none">${wp.name}</h3>
+                        <p class="text-[11px] text-[#ccc] font-light leading-snug mb-3">${wp.desc}</p>
+                        <button onclick="openCityModal('${wp.id}')" class="w-full btn-medieval font-cinzel font-bold text-[10px] py-2 uppercase tracking-widest">Изучить градъ</button>
+                    </div>
+                </div>
+            `);
+            
+            selectStart.add(new Option(wp.name, wp.id));
+            selectEnd.add(new Option(wp.name, wp.id));
+        });
+
+        selectStart.value = "novgorod";
+        selectEnd.value = "constantinople";
+
+        let currentGeoLayer = null;
+
+        // Функция загрузки изображения через background-image
+        function setHistImg(el, url, icon, label) {
+            el.classList.remove('loaded');
+            el.style.backgroundImage = '';
+            // Обновляем иконку-заглушку
+            const iconEl = el.querySelector('.img-icon');
+            if (iconEl) {
+                const sym = iconEl.querySelector('.icon-sym');
+                const lbl = iconEl.querySelector('.icon-lbl');
+                if (sym && icon) sym.textContent = icon;
+                if (lbl && label) lbl.textContent = label;
+            }
+            if (!url) return;
+            const img = new Image();
+            img.onload = function() {
+                el.style.backgroundImage = `url('${url}')`;
+                el.classList.add('loaded');
+            };
+            img.onerror = function() {
+                // Показываем красивую заглушку при ошибке загрузки
+                el.style.backgroundImage = '';
+            };
+            img.src = url;
+        }
+
+        // Функции модальных окон
+        function openCityModal(cityId) {
+            const wp = waypoints.find(w => w.id === cityId);
+            if (!wp) return;
+
+            document.getElementById('city-modal-title').innerText = wp.name;
+            document.getElementById('city-modal-history').innerText = wp.history;
+            
+            const eventsList = document.getElementById('city-modal-events');
+            eventsList.innerHTML = '';
+            wp.events.forEach(ev => {
+                const li = document.createElement('li');
+                li.innerText = ev;
+                eventsList.appendChild(li);
+            });
+
+            setHistImg(document.getElementById('city-modal-img'), wp.img, wp.icon || '🏙️', wp.iconLabel || wp.name);
+            
+            const modal = document.getElementById('city-modal');
+            const content = document.getElementById('city-modal-content');
+            
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            content.classList.remove('scale-95');
+            content.classList.add('scale-100');
+            map.closePopup();
+        }
+
+        function closeCityModal() {
+            const modal = document.getElementById('city-modal');
+            const content = document.getElementById('city-modal-content');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+        }
+
+        function openRegionModal(props) {
+            document.getElementById('modal-title').innerText = props.name;
+            document.getElementById('modal-desc').innerHTML = `<p>${props.desc}</p>`;
+            setHistImg(document.getElementById('modal-img'), props.img, props.icon || '🏰', props.name);
+            
+            const modal = document.getElementById('region-modal');
+            const content = document.getElementById('region-modal-content');
+            
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            content.classList.remove('scale-95');
+            content.classList.add('scale-100');
+        }
+
+        function closeRegionModal() {
+            const modal = document.getElementById('region-modal');
+            const content = document.getElementById('region-modal-content');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+        }
+
+        function updateEpoch(index) {
+            const data = timelines[index];
+            
+            document.getElementById('current-year-display').innerText = `Эпоха: ${data.title} (${data.dateStr})`;
+            document.getElementById('epoch-title').innerText = data.title;
+            document.getElementById('epoch-year').innerText = data.dateStr;
+            document.getElementById('epoch-desc').innerText = data.desc;
+            setHistImg(document.getElementById('epoch-image'), data.img, data.icon || '📜', data.title);
+
+            const ul = document.getElementById('epoch-events');
+            ul.innerHTML = '';
+            data.events.forEach(ev => {
+                const li = document.createElement('li');
+                li.innerText = ev;
+                ul.appendChild(li);
+            });
+
+            // Render persons and facts from app.js
+            renderPersons(index);
+            renderFact(index);
+
+            if (currentGeoLayer) {
+                map.removeLayer(currentGeoLayer);
+            }
+
+            currentGeoLayer = L.geoJSON(data.layer, {
+                style: function (feature) {
+                    return {
+                        color: feature.properties.color,
+                        weight: 2,
+                        opacity: 0.8,
+                        fillOpacity: 0.2
+                    };
+                },
+                onEachFeature: function (feature, layer) {
+                    layer.on('click', () => openRegionModal(feature.properties));
+                    layer.bindTooltip(feature.properties.name, {
+                        permanent: false, direction: "center", className: 'bg-[#1c1c1c] text-[#daa520] border border-[#daa520] font-cinzel font-bold'
+                    });
+                }
+            }).addTo(map);
+
+            if (currentRoute === 'varyagi') {
+                routeLine.bringToFront();
+            } else {
+                volgaRouteLine.bringToFront();
+            }
+        }
+
+        // Use both 'input' and 'change' for cross-browser support (Safari fires 'change', not 'input' on drag)
+        function onTimelineChange(e) {
+            updateEpoch(parseInt(e.target.value));
+        }
+        const timelineEl = document.getElementById('timeline');
+        timelineEl.addEventListener('input', onTimelineChange);
+        timelineEl.addEventListener('change', onTimelineChange);
+
+        // Touch events fallback for Safari/macOS trackpad
+        timelineEl.addEventListener('touchstart', function(e) { e.stopPropagation(); }, { passive: true });
+        timelineEl.addEventListener('touchmove', function(e) { e.stopPropagation(); }, { passive: true });
+        timelineEl.addEventListener('touchend', function(e) { onTimelineChange(e); }, { passive: true });
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.classList.remove('opacity-0', 'mt-[-20px]');
+            toast.classList.add('opacity-100', 'mt-0');
+            setTimeout(() => {
+                toast.classList.remove('opacity-100', 'mt-0');
+                toast.classList.add('opacity-0', 'mt-[-20px]');
+            }, 3000);
+        }
+
+        let shipMarker = null;
+        let animationFrame = null;
+
+        document.getElementById('start-btn').addEventListener('click', () => {
+            const startId = document.getElementById('route-start').value;
+            const endId = document.getElementById('route-end').value;
+
+            if (startId === endId) {
+                showToast('Ладья уже стоит в этой гавани!');
+                return;
+            }
+
+            const activeWaypoints = currentRoute === 'volga' ? volgaWaypoints : waypoints;
+            const startIndex = activeWaypoints.findIndex(w => w.id === startId);
+            const endIndex = activeWaypoints.findIndex(w => w.id === endId);
+            
+            let path = [];
+            if (startIndex < endIndex) {
+                path = activeWaypoints.slice(startIndex, endIndex + 1).map(w => w.coords);
+            } else {
+                path = activeWaypoints.slice(endIndex, startIndex + 1).reverse().map(w => w.coords);
+            }
+
+            let totalDist = 0;
+            for(let i=0; i<path.length-1; i++){
+                totalDist += map.distance(path[i], path[i+1]); 
+            }
+            const distKm = Math.round(totalDist / 1000);
+            
+            // Сбрасываем счетчики
+            document.getElementById('stat-dist').innerText = "0";
+            document.getElementById('stat-days').innerText = "0";
+
+            if (shipMarker) map.removeLayer(shipMarker);
+            if (animationFrame) cancelAnimationFrame(animationFrame);
+
+            shipMarker = L.marker(path[0], { icon: shipIcon, interactive: false }).addTo(map);
+            
+            let currentSegment = 0;
+            let progress = 0; 
+            const speed = 0.015; // Скорость анимации
+            const totalSegments = path.length - 1;
+
+            function animateShip() {
+                if (currentSegment >= totalSegments) {
+                    showToast('Ладья успешно бросила якорь!');
+                    // Фиксируем финальные цифры
+                    document.getElementById('stat-dist').innerText = distKm;
+                    document.getElementById('stat-days').innerText = Math.round(distKm / 35);
+                    return;
+                }
+
+                progress += speed;
+                if (progress >= 1) {
+                    progress = 0;
+                    currentSegment++;
+                    if (currentSegment >= totalSegments) {
+                        shipMarker.setLatLng(path[totalSegments]);
+                        showToast('Ладья успешно бросила якорь!');
+                        document.getElementById('stat-dist').innerText = distKm;
+                        document.getElementById('stat-days').innerText = Math.round(distKm / 35);
+                        return;
+                    }
+                }
+
+                const p1 = path[currentSegment];
+                const p2 = path[currentSegment + 1];
+                const lat = p1[0] + (p2[0] - p1[0]) * progress;
+                const lng = p1[1] + (p2[1] - p1[1]) * progress;
+                
+                shipMarker.setLatLng([lat, lng]);
+
+                // ДИНАМИЧЕСКОЕ ОБНОВЛЕНИЕ ЦИФР ВО ВРЕМЯ ДВИЖЕНИЯ
+                const completionRatio = (currentSegment + progress) / totalSegments;
+                const currentDist = Math.floor(distKm * completionRatio);
+                document.getElementById('stat-dist').innerText = currentDist;
+                document.getElementById('stat-days').innerText = Math.floor(currentDist / 35);
+
+                animationFrame = requestAnimationFrame(animateShip);
+            }
+
+            animateShip();
+        });
+
+        // Функция сворачивания/разворачивания таймлайна
+        let timelineVisible = true;
+        function toggleTimeline() {
+            timelineVisible = !timelineVisible;
+            const body = document.getElementById('timeline-body');
+            const btn = document.getElementById('timeline-collapse-btn');
+            if (timelineVisible) {
+                body.style.maxHeight = body.scrollHeight + 'px';
+                body.style.opacity = '1';
+                body.style.overflow = 'visible';
+                btn.textContent = '🔼 Скрыть';
+            } else {
+                body.style.maxHeight = '0';
+                body.style.opacity = '0';
+                body.style.overflow = 'hidden';
+                btn.textContent = '🔽 Показать';
+            }
+        }
+        // Инициализация анимации collapse
+        (function() {
+            const body = document.getElementById('timeline-body');
+            body.style.transition = 'max-height 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.3s';
+            body.style.maxHeight = '200px';
+            body.style.overflow = 'visible';
+        })();
+
+        // Запуск
+        updateEpoch(1);
+        renderGoods('varyagi');
+        renderEconomics('varyagi');
+
+        // Экспорт для мобильного скрипта
+        window.timelines = timelines;
+        window.updateEpoch = updateEpoch;
+        window.setHistImg = setHistImg;
+        window.currentRoute = currentRoute;
+        window.toggleTimeline = toggleTimeline;
+
+        // Патч updateEpoch — синхронизируем мобильное при каждом переключении
+        const _coreUpdateEpoch = updateEpoch;
+        window.updateEpoch = function(idx) {
+            _coreUpdateEpoch(idx);
+            window.currentRoute = currentRoute;
+            if (typeof syncMobChronicle === 'function') {
+                syncMobChronicle(idx);
+                const ml = document.getElementById('mobile-timeline-range');
+                if (ml) ml.value = idx;
+            }
+        };
+
+    </script>
+    <!-- =============================================
+         МОБИЛЬНЫЙ UI
+    ============================================= -->
+
+    <!-- Верхняя полоса: слайдер эпох -->
+    <div id="mobile-timeline">
+        <div class="mob-years">
+            <span>862</span><span>1054</span><span>1237</span><span>1380</span><span>1462</span>
+        </div>
+        <input type="range" id="mobile-timeline-range" min="0" max="4" value="1" step="1">
+        <div id="mobile-epoch-label">Золотой век Руси · 1019–1054 гг.</div>
+    </div>
+
+    <!-- Drawer 1: Летопись (левая панель) -->
+    <div id="drawer-chronicle" class="mobile-drawer">
+        <div style="padding: 16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                <span style="font-family:'Cinzel',serif;font-size:11px;color:var(--gold);text-transform:uppercase;letter-spacing:2px;">Летопись</span>
+                <button onclick="closeMobDrawer()" style="color:var(--gold);background:none;border:none;font-size:22px;line-height:1;cursor:pointer;">&times;</button>
+            </div>
+            <!-- Картинка эпохи -->
+            <div style="width:100%;height:130px;position:relative;overflow:hidden;background:#0a0805;margin-bottom:12px;border:1px solid #333;">
+                <div id="mob-epoch-img" class="hist-img" style="position:absolute;inset:0;">
+                    <div class="img-icon"><div class="icon-sym">📜</div><div class="icon-lbl">Летопись</div></div>
+                </div>
+            </div>
+            <h2 id="mob-epoch-title" style="font-family:'Cinzel',serif;font-size:18px;font-weight:900;color:#fff;margin:0 0 4px;"></h2>
+            <div id="mob-epoch-year" style="font-family:'Cinzel',serif;font-size:12px;color:var(--gold);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #333;"></div>
+            <p id="mob-epoch-desc" style="font-size:12px;line-height:1.7;color:#b0b0b0;margin-bottom:12px;"></p>
+            <div style="background:#111;padding:10px;border:1px solid #333;margin-bottom:10px;">
+                <div style="font-family:'Cinzel',serif;font-size:10px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;letter-spacing:1px;">Важнейшие события</div>
+                <ul id="mob-epoch-events" style="font-size:11px;color:#999;padding-left:16px;margin:0;line-height:1.8;"></ul>
+            </div>
+            <div style="background:#111;padding:10px;border:1px solid #333;margin-bottom:10px;">
+                <div style="font-family:'Cinzel',serif;font-size:10px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;letter-spacing:1px;">Ключевые фигуры</div>
+                <div id="mob-epoch-persons" style="display:flex;flex-direction:column;gap:6px;"></div>
+            </div>
+            <div style="background:linear-gradient(135deg,#1a1208,#111);border:1px solid var(--gold);border-left:4px solid var(--gold);padding:10px;">
+                <div style="font-family:'Cinzel',serif;font-size:10px;color:var(--gold);text-transform:uppercase;margin-bottom:4px;">📜 Историческая справка</div>
+                <p id="mob-epoch-fact" style="font-size:11px;color:#b0b0b0;line-height:1.7;margin:0;"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Drawer 2: Экспедиция (правая панель) -->
+    <div id="drawer-expedition" class="mobile-drawer">
+        <div style="padding:16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                <span style="font-family:'Cinzel',serif;font-size:11px;color:var(--gold);text-transform:uppercase;letter-spacing:2px;">⛵ Экспедиция</span>
+                <button onclick="closeMobDrawer()" style="color:var(--gold);background:none;border:none;font-size:22px;line-height:1;cursor:pointer;">&times;</button>
+            </div>
+            <!-- Декоративный баннер для мобильной экспедиции -->
+            <div style="width:100%;height:80px;position:relative;overflow:hidden;background:#000;margin-bottom:12px;border:1px solid #333;">
+                <div id="mob-expedition-banner" style="position:absolute;inset:0;background: url('assets/images/city_ladoga.png') center 30%/cover no-repeat;opacity:0.8;"></div>
+                <div id="mob-expedition-banner-icon" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:40px;opacity:0.2;">⛵</div>
+            </div>
+            <!-- Вкладки маршрутов -->
+            <div style="display:flex;gap:6px;margin-bottom:12px;">
+                <button class="route-tab active font-cinzel" data-route="varyagi" onclick="switchRoute('varyagi')" style="flex:1;">Из варяг в греки</button>
+                <button class="route-tab font-cinzel" data-route="volga" onclick="switchRoute('volga')" style="flex:1;">Волжский путь</button>
+            </div>
+            <div style="margin-bottom:8px;">
+                <label style="font-family:'Cinzel',serif;font-size:10px;color:var(--gold);display:block;margin-bottom:4px;">ОТКУДА:</label>
+                <select id="mob-route-start" style="width:100%;background:#111;color:#fff;padding:8px;border:1px solid #333;font-family:'Cinzel',serif;font-size:12px;outline:none;"></select>
+            </div>
+            <div style="margin-bottom:10px;">
+                <label style="font-family:'Cinzel',serif;font-size:10px;color:var(--gold);display:block;margin-bottom:4px;">КУДА:</label>
+                <select id="mob-route-end" style="width:100%;background:#111;color:#fff;padding:8px;border:1px solid #333;font-family:'Cinzel',serif;font-size:12px;outline:none;"></select>
+            </div>
+            <button onclick="startMobExpedition()" class="btn-medieval font-cinzel" style="width:100%;padding:12px;font-size:13px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;">Поднять паруса</button>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+                <div style="background:#111;border:1px solid #333;padding:10px;text-align:center;">
+                    <div style="font-family:'Cinzel',serif;font-size:9px;color:var(--gold);text-transform:uppercase;">Поприщъ (вёрст)</div>
+                    <div id="mob-stat-dist" style="font-family:'Cinzel',serif;font-size:20px;font-weight:bold;color:#fff;">0</div>
+                </div>
+                <div style="background:#111;border:1px solid #333;padding:10px;text-align:center;">
+                    <div style="font-family:'Cinzel',serif;font-size:9px;color:var(--gold);text-transform:uppercase;">Дней в пути</div>
+                    <div id="mob-stat-days" style="font-family:'Cinzel',serif;font-size:20px;font-weight:bold;color:#fff;">0</div>
+                </div>
+            </div>
+            <div style="background:#111;border:1px solid #333;padding:10px;margin-bottom:8px;">
+                <div style="font-family:'Cinzel',serif;font-size:9px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;">Товары в трюме</div>
+                <div id="mob-goods-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;"></div>
+            </div>
+            <div style="background:#111;border:1px solid #333;padding:10px;">
+                <div style="font-family:'Cinzel',serif;font-size:9px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;">💰 Экономика пути</div>
+                <div id="mob-trade-economics" style="font-size:10px;color:#999;line-height:1.7;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Нижний таббар -->
+    <div id="mobile-tabbar">
+        <button class="mob-tab active" id="tab-map" onclick="mobTab('map')">
+            <span class="tab-icon">🗺️</span>
+            <span>Карта</span>
+        </button>
+        <button class="mob-tab" id="tab-chronicle" onclick="mobTab('chronicle')">
+            <span class="tab-icon">📜</span>
+            <span>Летопись</span>
+        </button>
+        <button class="mob-tab" id="tab-expedition" onclick="mobTab('expedition')">
+            <span class="tab-icon">⛵</span>
+            <span>Экспедиция</span>
+        </button>
+        <button class="mob-tab" id="tab-quiz" onclick="openQuiz()">
+            <span class="tab-icon">📝</span>
+            <span>Викторина</span>
+        </button>
+    </div>
+
+    <script>
+    // =============================================
+    // МОБИЛЬНЫЙ JS
+    // =============================================
+
+    let activeMobTab = 'map';
+
+    function mobTab(tab) {
+        activeMobTab = tab;
+        // Сброс активного таба
+        document.querySelectorAll('.mob-tab').forEach(b => b.classList.remove('active'));
+        document.getElementById('tab-' + tab)?.classList.add('active');
+
+        // Закрываем все ящики
+        document.querySelectorAll('.mobile-drawer').forEach(d => d.classList.remove('open'));
+
+        if (tab === 'chronicle') {
+            document.getElementById('drawer-chronicle').classList.add('open');
+        } else if (tab === 'expedition') {
+            syncMobExpeditionSelects();
+            document.getElementById('drawer-expedition').classList.add('open');
+        }
+        // tab === 'map' — просто показываем карту
+    }
+
+    function closeMobDrawer() {
+        document.querySelectorAll('.mobile-drawer').forEach(d => d.classList.remove('open'));
+        document.querySelectorAll('.mob-tab').forEach(b => b.classList.remove('active'));
+        document.getElementById('tab-map')?.classList.add('active');
+        activeMobTab = 'map';
+    }
+
+    // Синхронизация данных для мобильного таймлайна
+    const mobTimeline = document.getElementById('mobile-timeline-range');
+    const mobEpochLabel = document.getElementById('mobile-epoch-label');
+
+    if (mobTimeline) {
+        mobTimeline.addEventListener('input', function() {
+            const idx = parseInt(this.value);
+            // Синхронизируем с десктопным слайдером
+            const desktopSlider = document.getElementById('timeline');
+            if (desktopSlider) desktopSlider.value = idx;
+            // Обновляем эпоху (вызов из основного скрипта)
+            if (typeof updateEpoch === 'function') {
+                updateEpoch(idx);
+                syncMobChronicle(idx);
+            }
+        });
+    }
+
+    // Синхронизировать мобильную летопись с данными эпохи
+    function syncMobChronicle(index) {
+        if (typeof timelines === 'undefined') return;
+        const data = timelines[index];
+        if (!data) return;
+
+        // Обновляем метку эпохи в шапке
+        if (mobEpochLabel) mobEpochLabel.textContent = data.title + ' · ' + data.dateStr;
+
+        // Заполняем ящик летописи
+        const title = document.getElementById('mob-epoch-title');
+        const year  = document.getElementById('mob-epoch-year');
+        const desc  = document.getElementById('mob-epoch-desc');
+        const ul    = document.getElementById('mob-epoch-events');
+        const fact  = document.getElementById('mob-epoch-fact');
+
+        if (title) title.textContent = data.title;
+        if (year)  year.textContent  = data.dateStr;
+        if (desc)  desc.textContent  = data.desc;
+        if (ul) {
+            ul.innerHTML = '';
+            data.events.forEach(ev => {
+                const li = document.createElement('li');
+                li.textContent = ev;
+                ul.appendChild(li);
+            });
+        }
+        if (fact && typeof epochFacts !== 'undefined') fact.textContent = epochFacts[index] || '';
+
+        // Персоны
+        const persons = document.getElementById('mob-epoch-persons');
+        if (persons && typeof epochPersons !== 'undefined') {
+            const list = epochPersons[index] || [];
+            persons.innerHTML = list.map(p => `
+                <div style="display:flex;align-items:center;gap:8px;padding:6px;background:#111;border:1px solid #333;">
+                    <div style="width:32px;height:32px;border-radius:50%;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:16px;background:#1c1c1c;flex-shrink:0;">${p.icon}</div>
+                    <div>
+                        <div style="font-family:'Cinzel',serif;font-size:11px;color:#fff;font-weight:bold;">${p.name}</div>
+                        <div style="font-size:10px;color:#888;">${p.role}</div>
+                    </div>
+                </div>`).join('');
+        }
+
+        // Обновляем картинку
+        const imgEl = document.getElementById('mob-epoch-img');
+        if (imgEl && typeof setHistImg === 'function') {
+            setHistImg(imgEl, data.img, data.icon || '📜', data.title);
+        }
+
+        // Товары и экономика
+        const goodsGrid = document.getElementById('mob-goods-grid');
+        if (goodsGrid && typeof routeGoods !== 'undefined') {
+            const route = typeof currentRoute !== 'undefined' ? currentRoute : 'varyagi';
+            const goods = routeGoods[route] || routeGoods.varyagi;
+            goodsGrid.innerHTML = goods.map(g => `
+                <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+                    <div style="width:40px;height:36px;display:flex;align-items:center;justify-content:center;font-size:20px;background:#111;border:1px solid #333;">${g.icon}</div>
+                    <span style="font-size:8px;color:#888;font-family:'Cinzel',serif;">${g.name}</span>
+                </div>`).join('');
+        }
+
+        const econ = document.getElementById('mob-trade-economics');
+        if (econ && typeof routeEconomics !== 'undefined') {
+            const route = typeof currentRoute !== 'undefined' ? currentRoute : 'varyagi';
+            const data2 = routeEconomics[route] || routeEconomics.varyagi;
+            econ.innerHTML = data2.map(l => `<div>${l}</div>`).join('');
+        }
+    }
+
+    // Синхронизация селектов экспедиции
+    function syncMobExpeditionSelects() {
+        const src = document.getElementById('route-start');
+        const dst = document.getElementById('route-end');
+        const ms  = document.getElementById('mob-route-start');
+        const me  = document.getElementById('mob-route-end');
+        if (!src || !ms) return;
+        ms.innerHTML = src.innerHTML;
+        me.innerHTML = dst.innerHTML;
+        ms.value = src.value;
+        me.value = dst.value;
+    }
+
+    // Запуск экспедиции с мобильного
+    function startMobExpedition() {
+        // Синхронизируем значения с десктопными селектами
+        const ms = document.getElementById('mob-route-start');
+        const me = document.getElementById('mob-route-end');
+        const ds = document.getElementById('route-start');
+        const de = document.getElementById('route-end');
+        if (ms && ds) ds.value = ms.value;
+        if (me && de) de.value = me.value;
+        // Запускаем десктопную анимацию
+        document.getElementById('start-btn')?.click();
+        closeMobDrawer();
+    }
+
+    // Следим за обновлением цифр с десктопного сайта и дублируем на мобильный
+    const distObserver = new MutationObserver(() => {
+        const d = document.getElementById('stat-dist');
+        const t = document.getElementById('stat-days');
+        const md = document.getElementById('mob-stat-dist');
+        const mt = document.getElementById('mob-stat-days');
+        if (d && md) md.textContent = d.textContent;
+        if (t && mt) mt.textContent = t.textContent;
+    });
+    const distEl = document.getElementById('stat-dist');
+    if (distEl) distObserver.observe(distEl, { childList: true, characterData: true, subtree: true });
+
+    // Инициализация мобильного при загрузке
+    window.addEventListener('load', function() {
+        setTimeout(() => {
+            syncMobChronicle(1); // индекс 1 = 1054 (начальная эпоха)
+            syncMobExpeditionSelects();
+        }, 300);
+    });
+
+    // Перехватываем updateEpoch чтобы синхронизировать мобильный
+    const _origUpdateEpoch = window.updateEpoch;
+    if (typeof updateEpoch === 'function') {
+        const _orig = updateEpoch;
+        window.updateEpoch = function(idx) {
+            _orig(idx);
+            syncMobChronicle(idx);
+            if (mobTimeline) mobTimeline.value = idx;
+        };
+    }
+    </script>
+
+</body>
+</html>
+
+
+
