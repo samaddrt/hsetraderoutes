@@ -397,7 +397,7 @@
             display: none;
             position: fixed;
             bottom: 14px; left: 14px; right: 14px;
-            z-index: 200;
+            z-index: 10002 !important;
             background: rgba(10, 10, 12, 0.85);
             backdrop-filter: blur(20px) saturate(180%);
             -webkit-backdrop-filter: blur(20px) saturate(180%);
@@ -447,7 +447,7 @@
             display: none;
             position: fixed;
             left: 14px; right: 14px; bottom: 92px;
-            z-index: 150;
+            z-index: 10000 !important;
             max-height: 60vh;
             overflow-y: auto;
             background: rgba(10, 10, 12, 0.9);
@@ -468,7 +468,7 @@
             display: none;
             position: fixed;
             top: 14px; left: 14px; right: 14px;
-            z-index: 100;
+            z-index: 10001 !important;
             background: rgba(10, 10, 12, 0.85);
             backdrop-filter: blur(20px) saturate(180%);
             -webkit-backdrop-filter: blur(20px) saturate(180%);
@@ -501,10 +501,12 @@
         @media (max-width: 767px) {
             /* Скрываем десктопный UI */
             #ui-layer { display: none !important; }
+            #ui-bottom { display: none !important; }
 
             /* Показываем мобильные элементы */
-            #mobile-tabbar { display: flex; }
-            #mobile-timeline { display: block; }
+            #mobile-tabbar { display: flex !important; }
+            #mobile-timeline { display: block !important; }
+            .mobile-drawer { display: block !important; }
 
             /* Карта занимает весь экран */
             #map-container {
@@ -542,9 +544,11 @@
                 border: 1px solid rgba(218, 165, 32, 0.4) !important;
             }
 
-            /* Листлет зум-кнопки — сдвигаем от таббара */
+            /* Смещаем Leaflet контейнеры управления, чтобы избежать наложений */
+            .leaflet-top.leaflet-right {
+                top: 84px !important; /* Полностью убираем наложение на верхний плавающий таймлайн */
+            }
             .leaflet-control-zoom {
-                margin-top: 96px !important; /* Убираем наложение на верхний таймлайн */
                 margin-bottom: 96px !important; /* Убираем наложение на нижний таббар */
             }
 
@@ -1109,6 +1113,16 @@
         // Надежные ссылки из Wikimedia Commons
         const waypoints = [
             { 
+              id: "baltic", 
+              name: "Варяжское море (Балтика)", 
+              coords: [59.3, 19.0], 
+              img: "assets/images/route_varyagi.png",
+              icon: "🌊", iconLabel: "Варяжское море",
+              desc: "Балтийское море, откуда скандинавские купцы (варяги) начинали свой путь.",
+              history: "Скандинавские мореплаватели выходили из гаваней Швеции и Готланда, пересекали Балтийское море и Финский залив, поднимаясь по Неве в Ладожское озеро.",
+              events: ["VIII в. — Первые набеги викингов", "Торговые караваны из Готланда и Бирки", "Освоение восточных речных путей"]
+            },
+            { 
               id: "ladoga", 
               name: "Старая Ладога", 
               coords: [59.998, 32.296], 
@@ -1274,12 +1288,42 @@
             }
         ];
 
-        const routeCoords = waypoints.map(wp => wp.coords);
-        const routeLine = L.polyline(routeCoords, { color: '#daa520', weight: 4, opacity: 0.8, dashArray: '10, 10' }).addTo(map);
+        // Высокоточные сегменты пути «Из варяг в греки»
+        const varyagiSegments = {
+            "baltic-ladoga": [[59.3, 19.0], [59.8, 23.0], [60.0, 27.0], [59.93, 30.3], [59.94, 31.0], [60.12, 32.32], [59.998, 32.296]],
+            "ladoga-novgorod": [[59.998, 32.296], [59.92, 32.33], [59.45, 32.01], [59.15, 31.85], [58.70, 31.45], [58.55, 31.33], [58.521, 31.271]],
+            "novgorod-smolensk": [[58.521, 31.271], [58.28, 31.28], [57.90, 31.35], [57.60, 31.40], [57.15, 31.18], [56.80, 30.90], [56.34, 30.53], [56.00, 30.70], [55.80, 30.60], [55.30, 31.20], [55.00, 31.80], [54.782, 32.045]],
+            "smolensk-kiev": [[54.782, 32.045], [54.51, 30.42], [54.21, 30.30], [53.90, 30.33], [53.52, 30.25], [53.09, 30.05], [52.89, 30.04], [52.36, 30.39], [51.80, 30.80], [51.15, 30.60], [50.450, 30.523]],
+            "kiev-constantinople": [[50.450, 30.523], [49.75, 31.46], [49.44, 32.00], [49.06, 33.41], [48.51, 34.61], [48.46, 35.04], [47.83, 35.15], [47.56, 34.40], [46.80, 33.48], [46.63, 32.61], [44.18, 28.65], [43.20, 27.91], [41.008, 28.978]]
+        };
+
+        // Высокоточные сегменты «Волжского пути»
+        const volgaSegments = {
+            "baltic_v-ladoga_v": [[59.3, 19.0], [59.8, 23.0], [60.0, 27.0], [59.93, 30.3], [59.94, 31.0], [60.12, 32.32], [59.998, 32.296]],
+            "ladoga_v-novgorod_v": [[59.998, 32.296], [59.92, 32.33], [59.45, 32.01], [59.15, 31.85], [58.70, 31.45], [58.55, 31.33], [58.521, 31.271]],
+            "novgorod_v-vladimir": [[58.521, 31.271], [57.90, 32.90], [57.30, 34.50], [56.86, 35.91], [56.74, 37.16], [56.87, 37.35], [57.52, 38.31], [57.78, 38.45], [58.05, 38.83], [57.62, 39.87], [56.80, 40.20], [56.129, 40.407]],
+            "vladimir-bulgar": [[56.129, 40.407], [56.15, 41.50], [56.32, 44.00], [56.03, 45.02], [56.34, 46.56], [56.15, 47.24], [55.85, 48.52], [55.79, 49.11], [54.976, 49.054]],
+            "bulgar-itil": [[54.976, 49.054], [54.31, 48.40], [53.51, 49.41], [53.20, 50.15], [53.15, 48.47], [52.48, 48.10], [52.03, 47.80], [51.54, 46.03], [50.08, 45.40], [48.70, 44.51], [47.80, 46.00], [47.1, 47.5]]
+        };
+
+        const varyagiCoordsList = [
+            ...varyagiSegments["baltic-ladoga"],
+            ...varyagiSegments["ladoga-novgorod"].slice(1),
+            ...varyagiSegments["novgorod-smolensk"].slice(1),
+            ...varyagiSegments["smolensk-kiev"].slice(1),
+            ...varyagiSegments["kiev-constantinople"].slice(1)
+        ];
+        const routeLine = L.polyline(varyagiCoordsList, { color: '#e63946', weight: 5, opacity: 0.9, dashArray: '10, 10' }).addTo(map);
 
         // Волжский путь
-        const volgaRouteCoords = volgaWaypoints.map(wp => wp.coords);
-        const volgaRouteLine = L.polyline(volgaRouteCoords, { color: '#4fc3f7', weight: 3, opacity: 0.6, dashArray: '8, 12' });
+        const volgaCoordsList = [
+            ...volgaSegments["baltic_v-ladoga_v"],
+            ...volgaSegments["ladoga_v-novgorod_v"].slice(1),
+            ...volgaSegments["novgorod_v-vladimir"].slice(1),
+            ...volgaSegments["vladimir-bulgar"].slice(1),
+            ...volgaSegments["bulgar-itil"].slice(1)
+        ];
+        const volgaRouteLine = L.polyline(volgaCoordsList, { color: '#ff9f43', weight: 5, opacity: 0.9, dashArray: '8, 12' });
 
         let currentRoute = 'varyagi';
         let volgaMarkers = [];
@@ -1313,7 +1357,7 @@
                     selectStart.add(new Option(wp.name, wp.id));
                     selectEnd.add(new Option(wp.name, wp.id));
                 });
-                selectStart.value = "novgorod";
+                selectStart.value = "baltic";
                 selectEnd.value = "constantinople";
             }
 
@@ -1339,11 +1383,11 @@
             const marker = L.marker(wp.coords, { icon: mainIcon });
             marker.bindPopup(`
                 <div class="flex flex-col">
-                    <div style="width:100%;height:96px;background:url('${wp.img}') center/cover no-repeat;background-color:#1c1c1c;border-bottom:1px solid #4fc3f7;"></div>
+                    <div style="width:100%;height:96px;background:url('${wp.img}') center/cover no-repeat;background-color:#1c1c1c;border-bottom:1px solid #ff9f43;"></div>
                     <div class="p-4 bg-[#1c1c1c]">
-                        <h3 class="text-lg font-bold text-[#4fc3f7] font-cinzel mb-2 leading-none">${wp.name}</h3>
+                        <h3 class="text-lg font-bold text-[#ff9f43] font-cinzel mb-2 leading-none">${wp.name}</h3>
                         <p class="text-[11px] text-[#ccc] font-light leading-snug mb-3">${wp.desc}</p>
-                        <button onclick="openCityModalVolga('${wp.id}')" class="w-full btn-medieval font-cinzel font-bold text-[10px] py-2 uppercase tracking-widest" style="color:#4fc3f7;border-color:#4fc3f7">Изучить градъ</button>
+                        <button onclick="openCityModalVolga('${wp.id}')" class="w-full btn-medieval font-cinzel font-bold text-[10px] py-2 uppercase tracking-widest" style="color:#ff9f43;border-color:#ff9f43">Изучить градъ</button>
                     </div>
                 </div>
             `);
@@ -1375,11 +1419,11 @@
             
             marker.bindPopup(`
                 <div class="flex flex-col">
-                    <div style="width:100%;height:96px;background:url('${wp.img}') center/cover no-repeat;background-color:#1c1c1c;border-bottom:1px solid #daa520;"></div>
+                    <div style="width:100%;height:96px;background:url('${wp.img}') center/cover no-repeat;background-color:#1c1c1c;border-bottom:1px solid #e63946;"></div>
                     <div class="p-4 bg-[#1c1c1c]">
-                        <h3 class="text-lg font-bold text-[#daa520] font-cinzel mb-2 leading-none">${wp.name}</h3>
+                        <h3 class="text-lg font-bold text-[#e63946] font-cinzel mb-2 leading-none">${wp.name}</h3>
                         <p class="text-[11px] text-[#ccc] font-light leading-snug mb-3">${wp.desc}</p>
-                        <button onclick="openCityModal('${wp.id}')" class="w-full btn-medieval font-cinzel font-bold text-[10px] py-2 uppercase tracking-widest">Изучить градъ</button>
+                        <button onclick="openCityModal('${wp.id}')" class="w-full btn-medieval font-cinzel font-bold text-[10px] py-2 uppercase tracking-widest" style="color:#e63946;border-color:#e63946">Изучить градъ</button>
                     </div>
                 </div>
             `);
@@ -1388,7 +1432,7 @@
             selectEnd.add(new Option(wp.name, wp.id));
         });
 
-        selectStart.value = "novgorod";
+        selectStart.value = "baltic";
         selectEnd.value = "constantinople";
 
         let currentGeoLayer = null;
@@ -1563,11 +1607,26 @@
             const startIndex = activeWaypoints.findIndex(w => w.id === startId);
             const endIndex = activeWaypoints.findIndex(w => w.id === endId);
             
+            const isForward = startIndex < endIndex;
+            const low = Math.min(startIndex, endIndex);
+            const high = Math.max(startIndex, endIndex);
+
+            const segments = currentRoute === 'volga' ? volgaSegments : varyagiSegments;
+            const keys = Object.keys(segments);
+
             let path = [];
-            if (startIndex < endIndex) {
-                path = activeWaypoints.slice(startIndex, endIndex + 1).map(w => w.coords);
-            } else {
-                path = activeWaypoints.slice(endIndex, startIndex + 1).reverse().map(w => w.coords);
+            for (let i = low; i < high; i++) {
+                const segKey = keys[i];
+                const segCoords = segments[segKey];
+                if (path.length === 0) {
+                    path = [...segCoords];
+                } else {
+                    path = path.concat(segCoords.slice(1));
+                }
+            }
+
+            if (!isForward) {
+                path = [...path].reverse();
             }
 
             let totalDist = 0;
