@@ -392,14 +392,20 @@
         ============================================ */
 
         /* Мобильный таббар снизу */
+        /* Мобильный плавающий таббар снизу */
         #mobile-tabbar {
             display: none;
             position: fixed;
-            bottom: 0; left: 0; right: 0;
+            bottom: 14px; left: 14px; right: 14px;
             z-index: 200;
-            background: rgba(15,15,17,0.98);
-            border-top: 1px solid #333;
-            height: 60px;
+            background: rgba(10, 10, 12, 0.85);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(218, 165, 32, 0.25);
+            border-radius: 32px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+            height: 64px;
+            padding: 2px 8px;
         }
         .mob-tab {
             flex: 1;
@@ -407,49 +413,69 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 2px;
+            gap: 3px;
             cursor: pointer;
-            color: #666;
+            color: #888;
             font-family: 'Cinzel', serif;
             font-size: 9px;
             letter-spacing: 0.5px;
             text-transform: uppercase;
             border: none;
             background: none;
-            transition: color 0.25s;
-            padding: 6px 4px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 4px;
+            border-radius: 20px;
         }
-        .mob-tab .tab-icon { font-size: 18px; line-height: 1; }
-        .mob-tab.active { color: var(--gold); }
-        .mob-tab:active { background: rgba(218,165,32,0.06); }
+        .mob-tab .tab-icon { 
+            font-size: 20px; 
+            line-height: 1; 
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .mob-tab.active { 
+            color: var(--gold); 
+            text-shadow: 0 0 10px rgba(218, 165, 32, 0.4);
+        }
+        .mob-tab.active .tab-icon {
+            transform: translateY(-4px) scale(1.25);
+        }
+        .mob-tab:active { 
+            background: rgba(218, 165, 32, 0.08); 
+        }
 
-        /* Мобильные панели-ящики (drawers) */
+        /* Мобильные плавающие нижние ящики (drawers) */
         .mobile-drawer {
             display: none;
             position: fixed;
-            left: 0; right: 0; bottom: 60px;
+            left: 14px; right: 14px; bottom: 92px;
             z-index: 150;
-            max-height: 65vh;
+            max-height: 60vh;
             overflow-y: auto;
-            background: rgba(17,17,17,0.98);
-            border-top: 2px solid var(--gold);
-            box-shadow: 0 -10px 40px rgba(0,0,0,0.8);
-            transform: translateY(100%);
-            transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+            background: rgba(10, 10, 12, 0.9);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid rgba(218, 165, 32, 0.3);
+            border-radius: 28px !important;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8);
+            transform: translateY(115%);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .mobile-drawer.open {
             transform: translateY(0);
         }
 
-        /* Мобильный слайдер эпох — горизонтальная полоса вверху */
+        /* Мобильный плавающий слайдер эпох вверху */
         #mobile-timeline {
             display: none;
             position: fixed;
-            top: 0; left: 0; right: 0;
+            top: 14px; left: 14px; right: 14px;
             z-index: 100;
-            background: rgba(15,15,17,0.95);
-            border-bottom: 1px solid #333;
-            padding: 8px 16px 6px;
+            background: rgba(10, 10, 12, 0.85);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(218, 165, 32, 0.25);
+            border-radius: 22px;
+            padding: 12px 18px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
         #mobile-timeline .mob-years {
             display: flex;
@@ -457,7 +483,10 @@
             font-family: 'Cinzel', serif;
             font-size: 10px;
             color: var(--gold);
-            margin-bottom: 4px;
+            margin-bottom: 2px;
+            font-weight: bold;
+            opacity: 0.8;
+            letter-spacing: 0.5px;
         }
         #mobile-timeline #mobile-epoch-label {
             text-align: center;
@@ -482,40 +511,65 @@
                 height: 100vh;
             }
 
-            /* Модалки — полный экран на мобильном */
+            /* Модалки — красивые плавающие карточки по центру экрана на мобильном */
             #region-modal > div,
             #city-modal > div,
             #quiz-modal > div {
-                max-width: 100% !important;
+                max-width: 92% !important;
                 width: 100% !important;
-                height: 100% !important;
-                max-height: 100% !important;
-                border-radius: 0 !important;
+                height: auto !important;
+                max-height: 80vh !important;
+                border-radius: 24px !important;
+                border: 1px solid rgba(218, 165, 32, 0.35) !important;
                 flex-direction: column !important;
-                margin: 0 !important;
+                margin: auto !important;
+                background: rgba(10, 10, 12, 0.95) !important;
+                backdrop-filter: blur(20px) !important;
+                -webkit-backdrop-filter: blur(20px) !important;
+                box-shadow: 0 15px 50px rgba(0, 0, 0, 0.9) !important;
+                overflow: hidden !important;
             }
             #city-modal {
-                align-items: flex-start !important;
+                align-items: center !important;
+                justify-content: center !important;
             }
             #city-modal > div .md\:w-1\/2 {
                 width: 100% !important;
-                height: 200px !important;
-                min-height: 200px !important;
+                height: 160px !important;
+                min-height: 160px !important;
             }
             #quiz-modal > div {
-                border: none !important;
-                border-top: 2px solid var(--gold) !important;
+                border: 1px solid rgba(218, 165, 32, 0.4) !important;
             }
 
             /* Листлет зум-кнопки — сдвигаем от таббара */
             .leaflet-control-zoom {
-                margin-bottom: 70px !important;
+                margin-top: 96px !important; /* Убираем наложение на верхний таймлайн */
+                margin-bottom: 96px !important; /* Убираем наложение на нижний таббар */
             }
 
-            /* Слайдер на мобильном */
-            input[type=range]::-webkit-slider-thumb {
-                height: 28px;
-                width: 16px;
+            /* Красивый мобильный слайдер эпох */
+            #mobile-timeline-range {
+                -webkit-appearance: none;
+                width: 100%;
+                height: 4px;
+                background: rgba(255, 255, 255, 0.15) !important;
+                border-radius: 2px;
+                outline: none;
+                margin: 10px 0 6px !important;
+            }
+            #mobile-timeline-range::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                height: 18px !important;
+                width: 18px !important;
+                border-radius: 50% !important;
+                background: var(--gold) !important;
+                box-shadow: 0 0 10px var(--gold) !important;
+                cursor: pointer;
+                transition: transform 0.2s;
+            }
+            #mobile-timeline-range::-webkit-slider-thumb:active {
+                transform: scale(1.3) !important;
             }
         }
 
@@ -1643,30 +1697,35 @@
 
     <!-- Drawer 1: Летопись (левая панель) -->
     <div id="drawer-chronicle" class="mobile-drawer">
-        <div style="padding: 16px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-                <span style="font-family:'Cinzel',serif;font-size:11px;color:var(--gold);text-transform:uppercase;letter-spacing:2px;">Летопись</span>
-                <button onclick="closeMobDrawer()" style="color:var(--gold);background:none;border:none;font-size:22px;line-height:1;cursor:pointer;">&times;</button>
+        <!-- Grab handle indicator for mobile sheet -->
+        <div style="width: 36px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; margin: 8px auto 0;"></div>
+        <div style="padding: 16px 20px 24px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                <span style="font-family:'Cinzel',serif;font-size:11px;color:var(--gold);text-transform:uppercase;letter-spacing:2px;font-weight:bold;">Летопись</span>
+                <button onclick="closeMobDrawer()" style="color:var(--gold);background:none;border:none;font-size:24px;line-height:1;cursor:pointer;opacity:0.7;transition:opacity 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">&times;</button>
             </div>
             <!-- Картинка эпохи -->
-            <div style="width:100%;height:130px;position:relative;overflow:hidden;background:#0a0805;margin-bottom:12px;border:1px solid #333;">
+            <div style="width:100%;height:140px;position:relative;overflow:hidden;background:#0a0805;margin-bottom:14px;border:1px solid rgba(218,165,32,0.2);border-radius:12px;">
                 <div id="mob-epoch-img" class="hist-img" style="position:absolute;inset:0;">
                     <div class="img-icon"><div class="icon-sym">📜</div><div class="icon-lbl">Летопись</div></div>
                 </div>
             </div>
-            <h2 id="mob-epoch-title" style="font-family:'Cinzel',serif;font-size:18px;font-weight:900;color:#fff;margin:0 0 4px;"></h2>
-            <div id="mob-epoch-year" style="font-family:'Cinzel',serif;font-size:12px;color:var(--gold);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #333;"></div>
-            <p id="mob-epoch-desc" style="font-size:12px;line-height:1.7;color:#b0b0b0;margin-bottom:12px;"></p>
-            <div style="background:#111;padding:10px;border:1px solid #333;margin-bottom:10px;">
-                <div style="font-family:'Cinzel',serif;font-size:10px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;letter-spacing:1px;">Важнейшие события</div>
-                <ul id="mob-epoch-events" style="font-size:11px;color:#999;padding-left:16px;margin:0;line-height:1.8;"></ul>
+            <h2 id="mob-epoch-title" style="font-family:'Cinzel',serif;font-size:20px;font-weight:900;color:#fff;margin:0 0 6px;letter-spacing:0.5px;"></h2>
+            <div id="mob-epoch-year" style="font-family:'Cinzel',serif;font-size:12px;color:var(--gold);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.08);font-weight:bold;"></div>
+            <p id="mob-epoch-desc" style="font-size:12px;line-height:1.7;color:#b0b0b0;margin-bottom:16px;"></p>
+            
+            <div style="background:rgba(255,255,255,0.03);padding:12px;border:1px solid rgba(255,255,255,0.06);border-radius:12px;margin-bottom:12px;">
+                <div style="font-family:'Cinzel',serif;font-size:10px;color:var(--gold);text-transform:uppercase;margin-bottom:8px;letter-spacing:1px;font-weight:bold;">Важнейшие события</div>
+                <ul id="mob-epoch-events" style="font-size:11px;color:#ccc;padding-left:16px;margin:0;line-height:1.8;"></ul>
             </div>
-            <div style="background:#111;padding:10px;border:1px solid #333;margin-bottom:10px;">
-                <div style="font-family:'Cinzel',serif;font-size:10px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;letter-spacing:1px;">Ключевые фигуры</div>
-                <div id="mob-epoch-persons" style="display:flex;flex-direction:column;gap:6px;"></div>
+            
+            <div style="background:rgba(255,255,255,0.03);padding:12px;border:1px solid rgba(255,255,255,0.06);border-radius:12px;margin-bottom:12px;">
+                <div style="font-family:'Cinzel',serif;font-size:10px;color:var(--gold);text-transform:uppercase;margin-bottom:8px;letter-spacing:1px;font-weight:bold;">Ключевые фигуры</div>
+                <div id="mob-epoch-persons" style="display:flex;flex-direction:column;gap:8px;"></div>
             </div>
-            <div style="background:linear-gradient(135deg,#1a1208,#111);border:1px solid var(--gold);border-left:4px solid var(--gold);padding:10px;">
-                <div style="font-family:'Cinzel',serif;font-size:10px;color:var(--gold);text-transform:uppercase;margin-bottom:4px;">📜 Историческая справка</div>
+            
+            <div style="background:linear-gradient(135deg, rgba(218,165,32,0.1), rgba(10,10,12,0.6));border:1px solid rgba(218,165,32,0.3);border-left:4px solid var(--gold);padding:12px;border-radius:8px;">
+                <div style="font-family:'Cinzel',serif;font-size:10px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;font-weight:bold;letter-spacing:0.5px;">📜 Историческая справка</div>
                 <p id="mob-epoch-fact" style="font-size:11px;color:#b0b0b0;line-height:1.7;margin:0;"></p>
             </div>
         </div>
@@ -1674,47 +1733,52 @@
 
     <!-- Drawer 2: Экспедиция (правая панель) -->
     <div id="drawer-expedition" class="mobile-drawer">
-        <div style="padding:16px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-                <span style="font-family:'Cinzel',serif;font-size:11px;color:var(--gold);text-transform:uppercase;letter-spacing:2px;">⛵ Экспедиция</span>
-                <button onclick="closeMobDrawer()" style="color:var(--gold);background:none;border:none;font-size:22px;line-height:1;cursor:pointer;">&times;</button>
+        <!-- Grab handle indicator for mobile sheet -->
+        <div style="width: 36px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; margin: 8px auto 0;"></div>
+        <div style="padding: 16px 20px 24px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                <span style="font-family:'Cinzel',serif;font-size:11px;color:var(--gold);text-transform:uppercase;letter-spacing:2px;font-weight:bold;">⛵ Экспедиция</span>
+                <button onclick="closeMobDrawer()" style="color:var(--gold);background:none;border:none;font-size:24px;line-height:1;cursor:pointer;opacity:0.7;transition:opacity 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">&times;</button>
             </div>
             <!-- Декоративный баннер для мобильной экспедиции -->
-            <div style="width:100%;height:80px;position:relative;overflow:hidden;background:#000;margin-bottom:12px;border:1px solid #333;">
+            <div style="width:100%;height:90px;position:relative;overflow:hidden;background:#000;margin-bottom:14px;border:1px solid rgba(218,165,32,0.2);border-radius:12px;">
                 <div id="mob-expedition-banner" style="position:absolute;inset:0;background: url('assets/images/city_ladoga.png') center 30%/cover no-repeat;opacity:0.8;"></div>
-                <div id="mob-expedition-banner-icon" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:40px;opacity:0.2;">⛵</div>
+                <div id="mob-expedition-banner-icon" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:44px;opacity:0.2;">⛵</div>
             </div>
             <!-- Вкладки маршрутов -->
-            <div style="display:flex;gap:6px;margin-bottom:12px;">
-                <button class="route-tab active font-cinzel" data-route="varyagi" onclick="switchRoute('varyagi')" style="flex:1;">Из варяг в греки</button>
-                <button class="route-tab font-cinzel" data-route="volga" onclick="switchRoute('volga')" style="flex:1;">Волжский путь</button>
-            </div>
-            <div style="margin-bottom:8px;">
-                <label style="font-family:'Cinzel',serif;font-size:10px;color:var(--gold);display:block;margin-bottom:4px;">ОТКУДА:</label>
-                <select id="mob-route-start" style="width:100%;background:#111;color:#fff;padding:8px;border:1px solid #333;font-family:'Cinzel',serif;font-size:12px;outline:none;"></select>
+            <div style="display:flex;gap:8px;margin-bottom:14px;">
+                <button class="route-tab active font-cinzel" data-route="varyagi" onclick="switchRoute('varyagi')" style="flex:1;border-radius:8px;">Из варяг в греки</button>
+                <button class="route-tab font-cinzel" data-route="volga" onclick="switchRoute('volga')" style="flex:1;border-radius:8px;">Волжский путь</button>
             </div>
             <div style="margin-bottom:10px;">
-                <label style="font-family:'Cinzel',serif;font-size:10px;color:var(--gold);display:block;margin-bottom:4px;">КУДА:</label>
-                <select id="mob-route-end" style="width:100%;background:#111;color:#fff;padding:8px;border:1px solid #333;font-family:'Cinzel',serif;font-size:12px;outline:none;"></select>
+                <label style="font-family:'Cinzel',serif;font-size:10px;color:var(--gold);display:block;margin-bottom:4px;font-weight:bold;letter-spacing:0.5px;">ОТКУДА:</label>
+                <select id="mob-route-start" style="width:100%;background:rgba(255,255,255,0.03);color:#fff;padding:10px;border:1px solid rgba(255,255,255,0.08);border-radius:8px;font-family:'Cinzel',serif;font-size:12px;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='rgba(255,255,255,0.08)'"></select>
             </div>
-            <button onclick="startMobExpedition()" class="btn-medieval font-cinzel" style="width:100%;padding:12px;font-size:13px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;">Поднять паруса</button>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
-                <div style="background:#111;border:1px solid #333;padding:10px;text-align:center;">
-                    <div style="font-family:'Cinzel',serif;font-size:9px;color:var(--gold);text-transform:uppercase;">Поприщъ (вёрст)</div>
-                    <div id="mob-stat-dist" style="font-family:'Cinzel',serif;font-size:20px;font-weight:bold;color:#fff;">0</div>
+            <div style="margin-bottom:14px;">
+                <label style="font-family:'Cinzel',serif;font-size:10px;color:var(--gold);display:block;margin-bottom:4px;font-weight:bold;letter-spacing:0.5px;">КУДА:</label>
+                <select id="mob-route-end" style="width:100%;background:rgba(255,255,255,0.03);color:#fff;padding:10px;border:1px solid rgba(255,255,255,0.08);border-radius:8px;font-family:'Cinzel',serif;font-size:12px;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='rgba(255,255,255,0.08)'"></select>
+            </div>
+            <button onclick="startMobExpedition()" class="btn-medieval font-cinzel" style="width:100%;padding:14px;font-size:13px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;margin-bottom:14px;border-radius:10px;">Поднять паруса</button>
+            
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+                <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:10px;text-align:center;">
+                    <div style="font-family:'Cinzel',serif;font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:0.5px;">Поприщъ (вёрст)</div>
+                    <div id="mob-stat-dist" style="font-family:'Cinzel',serif;font-size:22px;font-weight:bold;color:#fff;">0</div>
                 </div>
-                <div style="background:#111;border:1px solid #333;padding:10px;text-align:center;">
-                    <div style="font-family:'Cinzel',serif;font-size:9px;color:var(--gold);text-transform:uppercase;">Дней в пути</div>
-                    <div id="mob-stat-days" style="font-family:'Cinzel',serif;font-size:20px;font-weight:bold;color:#fff;">0</div>
+                <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:10px;text-align:center;">
+                    <div style="font-family:'Cinzel',serif;font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:0.5px;">Дней в пути</div>
+                    <div id="mob-stat-days" style="font-family:'Cinzel',serif;font-size:22px;font-weight:bold;color:#fff;">0</div>
                 </div>
             </div>
-            <div style="background:#111;border:1px solid #333;padding:10px;margin-bottom:8px;">
-                <div style="font-family:'Cinzel',serif;font-size:9px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;">Товары в трюме</div>
-                <div id="mob-goods-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;"></div>
+            
+            <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px;margin-bottom:12px;">
+                <div style="font-family:'Cinzel',serif;font-size:9px;color:var(--gold);text-transform:uppercase;margin-bottom:8px;font-weight:bold;letter-spacing:0.5px;">Товары в трюме</div>
+                <div id="mob-goods-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;"></div>
             </div>
-            <div style="background:#111;border:1px solid #333;padding:10px;">
-                <div style="font-family:'Cinzel',serif;font-size:9px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;">💰 Экономика пути</div>
-                <div id="mob-trade-economics" style="font-size:10px;color:#999;line-height:1.7;"></div>
+            
+            <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px;">
+                <div style="font-family:'Cinzel',serif;font-size:9px;color:var(--gold);text-transform:uppercase;margin-bottom:8px;font-weight:bold;letter-spacing:0.5px;">💰 Экономика пути</div>
+                <div id="mob-trade-economics" style="font-size:10px;color:#ccc;line-height:1.7;"></div>
             </div>
         </div>
     </div>
@@ -1823,11 +1887,11 @@
         if (persons && typeof epochPersons !== 'undefined') {
             const list = epochPersons[index] || [];
             persons.innerHTML = list.map(p => `
-                <div style="display:flex;align-items:center;gap:8px;padding:6px;background:#111;border:1px solid #333;">
-                    <div style="width:32px;height:32px;border-radius:50%;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:16px;background:#1c1c1c;flex-shrink:0;">${p.icon}</div>
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:10px;">
+                    <div style="width:34px;height:34px;border-radius:50%;border:1.5px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:18px;background:rgba(10,10,12,0.8);flex-shrink:0;box-shadow:0 0 8px rgba(218,165,32,0.2);">${p.icon}</div>
                     <div>
-                        <div style="font-family:'Cinzel',serif;font-size:11px;color:#fff;font-weight:bold;">${p.name}</div>
-                        <div style="font-size:10px;color:#888;">${p.role}</div>
+                        <div style="font-family:'Cinzel',serif;font-size:11px;color:#fff;font-weight:bold;letter-spacing:0.5px;">${p.name}</div>
+                        <div style="font-size:10px;color:#aaa;">${p.role}</div>
                     </div>
                 </div>`).join('');
         }
@@ -1844,9 +1908,9 @@
             const route = typeof currentRoute !== 'undefined' ? currentRoute : 'varyagi';
             const goods = routeGoods[route] || routeGoods.varyagi;
             goodsGrid.innerHTML = goods.map(g => `
-                <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
-                    <div style="width:40px;height:36px;display:flex;align-items:center;justify-content:center;font-size:20px;background:#111;border:1px solid #333;">${g.icon}</div>
-                    <span style="font-size:8px;color:#888;font-family:'Cinzel',serif;">${g.name}</span>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:4px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:6px 4px;">
+                    <div style="width:42px;height:38px;display:flex;align-items:center;justify-content:center;font-size:22px;background:rgba(10,10,12,0.6);border-radius:6px;">${g.icon}</div>
+                    <span style="font-size:8px;color:#bbb;font-family:'Cinzel',serif;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;">${g.name}</span>
                 </div>`).join('');
         }
 
