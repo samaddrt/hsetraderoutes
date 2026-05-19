@@ -1666,21 +1666,74 @@
 
             shipMarker = L.marker(path[0], { icon: shipIcon, interactive: false }).addTo(map);
             
+            // Динамический расчет скорости и времени в пути на основе исторической эпохи
+            const activeIndex = parseInt(document.getElementById('timeline').value);
+            let baseSpeed = 0.015; // Скорость анимации (шаг прогресса на кадр)
+            let kmPerDay = 35;     // Скорость движения ладьи (км в день)
+            let travelAlert = "";
+
+            if (currentRoute === 'varyagi') {
+                if (activeIndex === 0 || activeIndex === 1) {
+                    // 862, 1054: золотой век пути
+                    baseSpeed = 0.020;
+                    kmPerDay = 40;
+                    travelAlert = "🚢 Путь благополученъ: караваны идут под охраной княжеских дружин!";
+                } else if (activeIndex === 2) {
+                    // 1237: нашествие Батыя (очень опасно и медленно)
+                    baseSpeed = 0.007;
+                    kmPerDay = 15;
+                    travelAlert = "⚠️ Опаснось! Путь разорен Батыем, на Днепре рыщут отряды кочевников! Скорость движения резко снижена.";
+                } else if (activeIndex === 3) {
+                    // 1380: Куликово (путь перекрыт)
+                    baseSpeed = 0.004;
+                    kmPerDay = 10;
+                    travelAlert = "🛑 Внимание! Путь перекрыт литовцами и татарами, ладья пробивается с боями!";
+                } else if (activeIndex === 4) {
+                    // 1462: путь умер
+                    baseSpeed = 0.002;
+                    kmPerDay = 5;
+                    travelAlert = "💀 Путь угас: Византия пала, южный Днепр полностью заблокирован. Движение практически парализовано.";
+                }
+            } else {
+                // Волга
+                if (activeIndex === 0 || activeIndex === 1) {
+                    // 862, 1054: активная торговля
+                    baseSpeed = 0.018;
+                    kmPerDay = 35;
+                    travelAlert = "🐫 Волжский путь активен: караваны везут арабское серебро и шелка!";
+                } else if (activeIndex === 2) {
+                    // 1237: нашествие
+                    baseSpeed = 0.006;
+                    kmPerDay = 12;
+                    travelAlert = "⚠️ Опаснось! Поволжье разорено монголами, движение ладьи крайне затруднено.";
+                } else if (activeIndex === 3) {
+                    // 1380: восстановление
+                    baseSpeed = 0.014;
+                    kmPerDay = 25;
+                    travelAlert = "⚔️ Волга оживает под контролем Москвы и Орды, но будьте бдительны!";
+                } else if (activeIndex === 4) {
+                    // 1462: государственная магистраль
+                    baseSpeed = 0.026;
+                    kmPerDay = 48;
+                    travelAlert = "👑 Государева дорога! Волжский путь полностью под контролем Москвы. Максимальная скорость и безопасность!";
+                }
+            }
+
+            showToast(travelAlert);
+
             let currentSegment = 0;
             let progress = 0; 
-            const speed = 0.015; // Скорость анимации
             const totalSegments = path.length - 1;
 
             function animateShip() {
                 if (currentSegment >= totalSegments) {
                     showToast('Ладья успешно бросила якорь!');
-                    // Фиксируем финальные цифры
                     document.getElementById('stat-dist').innerText = distKm;
-                    document.getElementById('stat-days').innerText = Math.round(distKm / 35);
+                    document.getElementById('stat-days').innerText = Math.round(distKm / kmPerDay);
                     return;
                 }
 
-                progress += speed;
+                progress += baseSpeed;
                 if (progress >= 1) {
                     progress = 0;
                     currentSegment++;
@@ -1688,7 +1741,7 @@
                         shipMarker.setLatLng(path[totalSegments]);
                         showToast('Ладья успешно бросила якорь!');
                         document.getElementById('stat-dist').innerText = distKm;
-                        document.getElementById('stat-days').innerText = Math.round(distKm / 35);
+                        document.getElementById('stat-days').innerText = Math.round(distKm / kmPerDay);
                         return;
                     }
                 }
@@ -1704,7 +1757,7 @@
                 const completionRatio = (currentSegment + progress) / totalSegments;
                 const currentDist = Math.floor(distKm * completionRatio);
                 document.getElementById('stat-dist').innerText = currentDist;
-                document.getElementById('stat-days').innerText = Math.floor(currentDist / 35);
+                document.getElementById('stat-days').innerText = Math.floor(currentDist / kmPerDay);
 
                 animationFrame = requestAnimationFrame(animateShip);
             }
