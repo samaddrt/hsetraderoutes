@@ -1518,8 +1518,30 @@
             content.classList.add('scale-95');
         }
 
+        function updateRouteStyles(index) {
+            if (index === 0 || index === 1) {
+                // 862 и 1054 гг. — Расцвет обоих путей
+                routeLine.setStyle({ color: '#e63946', weight: 5, opacity: 0.9, dashArray: '10, 10' });
+                volgaRouteLine.setStyle({ color: '#ff9f43', weight: 5, opacity: 0.9, dashArray: '8, 12' });
+            } else if (index === 2) {
+                // 1237 г. — Нашествие Батыя: упадок и блокада путей кочевниками
+                routeLine.setStyle({ color: '#a52a2a', weight: 3, opacity: 0.4, dashArray: '2, 10' });
+                volgaRouteLine.setStyle({ color: '#b57c32', weight: 3, opacity: 0.4, dashArray: '3, 12' });
+            } else if (index === 3) {
+                // 1380 г. — Куликовская битва: Днепровский путь мертв (юг под Литвой), Волга возрождается
+                routeLine.setStyle({ color: '#555555', weight: 2, opacity: 0.2, dashArray: '1, 15' });
+                volgaRouteLine.setStyle({ color: '#ff9f43', weight: 4, opacity: 0.7, dashArray: '6, 10' });
+            } else if (index === 4) {
+                // 1462 г. — Возвышение Москвы: Днепр перекрыт, Византия пала (1453).
+                // Волжский путь становится главной монолитной артерией Московского государства!
+                routeLine.setStyle({ color: '#555555', weight: 1.5, opacity: 0.1, dashArray: '1, 20' });
+                volgaRouteLine.setStyle({ color: '#ff9f43', weight: 6, opacity: 1.0, dashArray: null });
+            }
+        }
+
         function updateEpoch(index) {
             const data = timelines[index];
+            updateRouteStyles(index);
             
             document.getElementById('current-year-display').innerText = `Эпоха: ${data.title} (${data.dateStr})`;
             document.getElementById('epoch-title').innerText = data.title;
